@@ -237,6 +237,26 @@ ui <- fluidPage(
              tags$h4("Table of all aligned (and normalized) profiles"),
              downloadButton("downloadData", "Download .csv file"),
              tableOutput("csv_file"))
+    # FOURTH TAB 
+    # general information and impressum
+    tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
+             tags$h4("About Us"),
+             tags$div("This shiny app was developed by Chiara Schiller and",
+                      tags$a(href="https://www.umm.uni-heidelberg.de/biochemie/research/research-johanna-schott/", "Johanna Schott", style = "color:blue"),
+                      "at the",
+                      tags$a(href="https://www.umm.uni-heidelberg.de/medical-faculty-mannheim/home/", "Medical Faculty Mannheim", style = "color:blue"),
+                      "(", 
+                      tags$a(href="https://www.umm.uni-heidelberg.de/mi3/", "MI3", style = "color:blue"), 
+                      ",",
+                      tags$a(href="https://www.umm.uni-heidelberg.de/biochemie/", "Stoecklin lab", style = "color:blue"),
+                      ")."
+             ),
+             tags$h4("Acknowledgements"),
+             tags$div("We would like to thank Dr. Andreas Bohne-Lang at the",
+                      tags$a(href="https://www.umm.uni-heidelberg.de/fakultaet/edv/", "IT department", style = "color:blue"),
+                      "of the Medical Faculty Mannheim and all members of the Stoecklin lab for support and input."),
+             tags$h4(tags$a(href="https://www.umm.uni-heidelberg.de/impressum/", "Impressum", style = "color:blue") )
+    )
   ))
 
 
