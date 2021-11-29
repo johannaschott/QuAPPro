@@ -1030,10 +1030,7 @@ server <- function(input, output, session) {
   
   output$plot_align <- renderPlot({
     req(files_to_plot())
-    if(val$buttons == 3)
-    {
       plot_alignedPol()
-    }
   })
 
   # Enable download of current plot as pdf
