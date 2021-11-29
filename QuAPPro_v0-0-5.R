@@ -83,6 +83,8 @@ smooth_profile <- function(y, half_window)
 ### USER INTERFACE ###
 
 ui <- fluidPage(
+  # add title for webpage tab
+  tags$head(tags$title("QuAPPro at MI3")),
   # add shiny theme 
   theme = shinythemes::shinytheme(("simplex")),
   #create title and subtitles visible in every tab
