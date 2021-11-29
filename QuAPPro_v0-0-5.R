@@ -238,7 +238,7 @@ ui <- fluidPage(
     tabPanel(tags$strong("Alignment table"), icon = icon("table"), 
              tags$h4("Table of all aligned (and normalized) profiles"),
              downloadButton("downloadData", "Download .csv file"),
-             tableOutput("csv_file"))
+             tableOutput("csv_file")),
     # FOURTH TAB 
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
@@ -1030,7 +1030,10 @@ server <- function(input, output, session) {
   
   output$plot_align <- renderPlot({
     req(files_to_plot())
+    if(length(files_to_plot()) > 1)
+    {
       plot_alignedPol()
+    }
   })
 
   # Enable download of current plot as pdf
