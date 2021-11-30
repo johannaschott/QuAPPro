@@ -112,7 +112,7 @@ ui <- fluidPage(
              fluidRow(
                column(2,
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks or csv file", multiple = F, accept = c(".pks",".csv")),
+                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -270,7 +270,7 @@ server <- function(input, output, session) {
   # create reactive values for collecting values in a list/vector/data.frame
   
   val <- reactiveValues(
-    paths_collected = list()
+    paths_collected = vector()
   )
   val <- reactiveValues(
     colors_collected = list()
@@ -331,8 +331,8 @@ server <- function(input, output, session) {
     })
   # when an input file is selected store the path to the selected file name as current_path
   current_path <- reactive({
-    val$paths_collected[[input$input_data$name]] <- input$input_data$datapath
-    val$paths_collected[[input$select]]
+    val$paths_collected[input$input_data$name] <- input$input_data$datapath
+    val$paths_collected[input$select]
   })
   
   # read selected datapath from the current selected file (input$select) for input data storage
@@ -859,8 +859,8 @@ server <- function(input, output, session) {
     dummy <- list()
     for(f in files_to_plot())
     {
-      start <- grep("Data Columns:", readLines(val$paths_collected[[f]]))
-      fluo <- read.csv(val$paths_collected[[f]], skip = start)$SampleFluor
+      start <- grep("Data Columns:", readLines(val$paths_collected[f]))
+      fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
       dummy[[f]] <- ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f]
     }
     dummy
@@ -872,13 +872,13 @@ server <- function(input, output, session) {
     for(f in files_to_plot())
     {
       if(val$factors_list[[f]] == (0.1/60)){
-        next_y <- read.table(val$paths_collected[[f]], dec = ",", header = F)$V3
+        next_y <- read.table(val$paths_collected[f], dec = ",", header = F)$V3
       }else if(val$factors_list[[f]] == (4.8/15)/60){
-        start <- grep("Data Columns:", readLines(val$paths_collected[[f]]))
-        next_y <- read.csv(val$paths_collected[[f]], skip = start)$AbsA
+        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
+        next_y <- read.csv(val$paths_collected[f], skip = start)$AbsA
       }else if(val$factors_list[f] == (0.2)/60){
-        start <- grep("Data Columns:", readLines(val$paths_collected[[f]]))
-        next_y <- head(read.csv(val$paths_collected[[f]], skip = start)$Absorbance, -1)
+        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
+        next_y <- head(read.csv(val$paths_collected[f], skip = start)$Absorbance, -1)
       }
       
       dummy[[f]] <- ( ( next_y - val$baseline[f])/norm_factor()[f])*norm_factor_x()[f]
@@ -1053,28 +1053,3 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 ###############
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
