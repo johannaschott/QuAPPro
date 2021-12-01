@@ -200,7 +200,9 @@ ui <- fluidPage(
                       tags$h4(tags$strong("Alignment")),
                       tags$h6("(Baseline and x-anchor need to be set)"),
                       selectInput("select_alignment", "Files ready to align", choices = c(), width = '100%'),
-                      actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      # actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      actionButton("up", "up", icon = icon("align-center"), width = '25%'),
+                      actionButton("down", "down", icon = icon("align-center"), width = '25%'),
                       # aligne profiles by pressing the button
                       #changing their color and linetype seing the changes directly in the plot
                       
@@ -1008,6 +1010,10 @@ server <- function(input, output, session) {
       points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
            lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
+    legend("topright", legend = files_to_plot(), lty = lines_vector()[files_to_plot()], 
+           lwd = linewidth_vector()[files_to_plot()], col = colors_vector()[files_to_plot()],
+           bty = "n"
+           )
   }
   
   plot_alignedFluo <- function(){
