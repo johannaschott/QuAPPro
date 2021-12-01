@@ -800,22 +800,28 @@ server <- function(input, output, session) {
     val$files_to_align[!val$files_to_align %in% val$remove_files_list]
   })
     
-    # move files up or down in the val$files_to_align vector
+  # move files up or down in the val$files_to_align vector
   observeEvent(input$up, {
-    files_order <- 1:length(val$files_to_align)
     to_be_shifted <- which( val$files_to_align == input$select_alignment )
-    files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
-    files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
-    val$files_to_align <- val$files_to_align[files_order]
+    if(to_be_shifted > 1)
+    {
+      files_order <- 1:length(val$files_to_align)
+      files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
+      files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
+      val$files_to_align <- val$files_to_align[files_order]
+    }
   })
   
   # move files up or down in the val$files_to_align vector
   observeEvent(input$down, {
-    files_order <- 1:length(val$files_to_align)
     to_be_shifted <- which( val$files_to_align == input$select_alignment )
-    files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
-    files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
-    val$files_to_align <- val$files_to_align[files_order]
+    if(to_be_shifted < length(val$files_to_align))
+    {
+      files_order <- 1:length(val$files_to_align)
+      files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
+      files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
+      val$files_to_align <- val$files_to_align[files_order]
+    }
   })
    
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
