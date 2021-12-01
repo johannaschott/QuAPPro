@@ -799,11 +799,29 @@ server <- function(input, output, session) {
   files_to_plot <- reactive({
     val$files_to_align[!val$files_to_align %in% val$remove_files_list]
   })
+    
+    # move files up or down in the val$files_to_align vector
+  observeEvent(input$up, {
+    files_order <- 1:length(val$files_to_align)
+    to_be_shifted <- which( val$files_to_align == input$select_alignment )
+    files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
+    files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
+    val$files_to_align <- val$files_to_align[files_order]
+  })
   
+  # move files up or down in the val$files_to_align vector
+  observeEvent(input$down, {
+    files_order <- 1:length(val$files_to_align)
+    to_be_shifted <- which( val$files_to_align == input$select_alignment )
+    files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
+    files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
+    val$files_to_align <- val$files_to_align[files_order]
+  })
+   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
     dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3")
-    names(dummy) <- files_to_plot()
+    names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
     }
