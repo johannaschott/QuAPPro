@@ -200,7 +200,10 @@ ui <- fluidPage(
                       tags$h4(tags$strong("Alignment")),
                       tags$h6("(Baseline and x-anchor need to be set)"),
                       selectInput("select_alignment", "Files ready to align", choices = c(), width = '100%'),
-                      actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      # actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      fluidRow(
+                        column(6, actionButton("up", "up", icon = icon("angle-double-up"), width = '100%')),
+                        column(6, actionButton("down", "down", icon = icon("angle-double-down"), width = '100%'))),
                       # aligne profiles by pressing the button
                       #changing their color and linetype seing the changes directly in the plot
                       
@@ -796,11 +799,35 @@ server <- function(input, output, session) {
   files_to_plot <- reactive({
     val$files_to_align[!val$files_to_align %in% val$remove_files_list]
   })
+    
+  # move files up or down in the val$files_to_align vector
+  observeEvent(input$up, {
+    to_be_shifted <- which( val$files_to_align == input$select_alignment )
+    if(to_be_shifted > 1)
+    {
+      files_order <- 1:length(val$files_to_align)
+      files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
+      files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
+      val$files_to_align <- val$files_to_align[files_order]
+    }
+  })
   
+  # move files up or down in the val$files_to_align vector
+  observeEvent(input$down, {
+    to_be_shifted <- which( val$files_to_align == input$select_alignment )
+    if(to_be_shifted < length(val$files_to_align))
+    {
+      files_order <- 1:length(val$files_to_align)
+      files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
+      files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
+      val$files_to_align <- val$files_to_align[files_order]
+    }
+  })
+   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
     dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3")
-    names(dummy) <- files_to_plot()
+    names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
     }
@@ -1008,6 +1035,10 @@ server <- function(input, output, session) {
       points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
            lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
+    legend("topright", legend = files_to_plot(), lty = lines_vector()[files_to_plot()], 
+           lwd = linewidth_vector()[files_to_plot()], col = colors_vector()[files_to_plot()],
+           bty = "n"
+           )
   }
   
   plot_alignedFluo <- function(){
