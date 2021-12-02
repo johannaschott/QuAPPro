@@ -1061,7 +1061,7 @@ server <- function(input, output, session) {
   
   output$plot_align <- renderPlot({
     req(files_to_plot())
-    if(length(files_to_plot()) > 1)
+    if(length(files_to_plot()) >= 1)
     {
       plot_alignedPol()
     }
