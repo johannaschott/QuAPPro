@@ -1024,7 +1024,7 @@ server <- function(input, output, session) {
     if(lost_num_al_pol() == 1 ){
       ylab <- "UV abs."
     }else{
-      ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
+      ylab <- paste("UV abs. (x ", lost_num_al_pol(), ")", sep = "")
     }
     
     f <- files_to_plot()[1]
