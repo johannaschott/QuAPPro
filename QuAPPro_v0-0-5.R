@@ -1034,8 +1034,8 @@ server <- function(input, output, session) {
          lwd = linewidth_vector()[f],
          ylab = ylab, xlab = "Index", las = 1,
          col = colors_vector()[f], mgp = c(2, 0.6, 0), 
-         ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax())
-     yaxt = "n"
+         ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
+         yaxt = "n"
     )
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
