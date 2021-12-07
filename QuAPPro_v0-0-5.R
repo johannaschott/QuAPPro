@@ -947,7 +947,7 @@ server <- function(input, output, session) {
   # find maximum of y-axis values for polysome profiles
   ymax_all <- reactive({
     profile_heights <- sapply(values_list()[files_to_plot()], FUN = max)
-    (max((profile_heights - (val$baseline[files_to_plot()]/norm_factor()[files_to_plot()])*norm_factor_x()[files_to_plot()])))
+    max(profile_heights )
   })
   
   # axis labels are modified if there are more than three numerals
