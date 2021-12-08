@@ -756,7 +756,7 @@ server <- function(input, output, session) {
   # Enable download of current plot as pdf
   
   output$downloadSinglePlot <- downloadHandler(
-    filename = str_remove(input$select,".pks"),
+    filename = function(){ sub(pattern = "(.*?)\\..*$", replacement = "\\1", as.character(input$select) ) },
     content = function(file) {
       pdf(file, width = 10, height = 6 )
       print( plot_singleInput() )
@@ -1081,7 +1081,7 @@ server <- function(input, output, session) {
   # Enable download of current plot as pdf
   
   output$downloadPlot <- downloadHandler(
-    filename = NA,
+    filename = "alignment",
     content = function(file) {
       pdf(file, width = 10, height = 6 )
       print( plot_alignedPol() )
