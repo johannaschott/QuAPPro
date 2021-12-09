@@ -896,7 +896,7 @@ server <- function(input, output, session) {
     {
       start <- grep("Data Columns:", readLines(val$paths_collected[f]))
       fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
-      dummy[[f]] <- ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f]
+      dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
     }
     dummy
   })
@@ -1082,7 +1082,7 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "", las = 1,
          col = colors_vector()[f], mgp = c(2, 0.6, 0), 
          ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
-         yaxt = "n", yaxt = "n"
+         yaxt = "n", xaxt = "n"
     )
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
