@@ -130,6 +130,10 @@ ui <- fluidPage(
                         column(6,
                                numericInput("axis2_fl", "Set y max", value = NULL))),
                       
+                      # introduce a slider for smoothing of the fluorescence signal
+                      fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
+                                           max = 100, value = 0)),
+                      
                       # set a separate baseline for the fluorescence signal
                       fluidRow(
                               column(6,actionButton("baseline_fl", "Set baseline", width = '100%'))),
@@ -365,7 +369,7 @@ server <- function(input, output, session) {
     req(input$show_fl)
     # one condition missing!!
     if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-      file_plot()[ ,3]}
+      smooth_profile( file_plot()[ ,3], input$slider1 )}
     
   })
   
