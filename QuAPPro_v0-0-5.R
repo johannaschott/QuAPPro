@@ -957,6 +957,12 @@ server <- function(input, output, session) {
     profile_heights <- sapply(values_list()[files_to_plot()], FUN = max)
     max(profile_heights )
   })
+    
+  # find maximum of y-axis values for fluorescence profiles
+  ymax_all_fl <- reactive({
+    profile_heights <- sapply(values_fluorescence()[files_to_plot()], FUN = max)
+    max(profile_heights )
+  })
   
   # axis labels are modified if there are more than three numerals
   lost_num_al_fl <- reactive({
@@ -1004,7 +1010,7 @@ server <- function(input, output, session) {
   
   ymax_fl <- reactive({
     if(is.na(input$axis2_a_fl)){
-      ymax_all()  
+      ymax_all_fl()  
     }else{
       input$axis2_a_fl*lost_num_al_fl()
     }})
@@ -1037,7 +1043,7 @@ server <- function(input, output, session) {
     
     f <- files_to_plot()[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
-    par(mar = c(4, 4, 0.5, 2)) 
+    par(mar = c(4, 4, 0, 2)) 
     plot(x, values_list()[[f]], type = "l", lty = lines_vector()[f],
          lwd = linewidth_vector()[f],
          ylab = ylab, xlab = "Index", las = 1,
@@ -1076,7 +1082,7 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "", las = 1,
          col = colors_vector()[f], mgp = c(2, 0.6, 0), 
          ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
-         yaxt = "n"
+         yaxt = "n", yaxt = "n"
     )
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
