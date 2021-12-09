@@ -160,7 +160,11 @@ ui <- fluidPage(
                column(4, plotOutput("plot_align")),
                column(2,
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
-                      fluidRow(tags$h5(tags$strong("Fluoresence")),
+                      fluidRow(tags$h5(tags$strong("Fluorescence")),
+                               
+                               # show fluorescence signal or not?
+                                checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
+                               
                                column(6,
                                       numericInput("axis1_a_fl", "Set y min", value = NULL)),
                                column(6,
@@ -1086,7 +1090,7 @@ server <- function(input, output, session) {
   }
 
   plot_alignment <- function(){
-      if(input$show_fl){
+      if(input$show_fl_al){
         layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
         plot_alignedFluo()
         plot_alignedPol()
