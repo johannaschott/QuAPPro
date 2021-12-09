@@ -1057,15 +1057,26 @@ server <- function(input, output, session) {
   }
   
   plot_alignedFluo <- function(){
+    
+    if(lost_num_al_fl() == 1 ){
+      ylab <- "Fluorescence"
+    }else{
+      ylab <- paste("Fluo. (x ", lost_num_al_fl(), ")", sep = "")
+    }
+    
     f <- files_to_plot()[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(0, 4, 0.5, 2)) 
     plot(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f],
          lwd = linewidth_vector()[f],
-         ylab = "Fluorescence", xlab = "Index", las = 1,
+         ylab = ylab, xlab = "", las = 1,
          col = colors_vector()[f], mgp = c(2, 0.6, 0), 
-         ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax())
+         ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
+         yaxt = "n"
     )
+    a <- axTicks(2)
+    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
+    
     for(f in files_to_plot()[-1])
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
@@ -1073,12 +1084,22 @@ server <- function(input, output, session) {
              lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
   }
+
+  plot_alignment <- function(){
+      if(input$show_fl){
+        layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
+        plot_alignedFluo()
+        plot_alignedPol()
+      }else{
+        plot_alignedPol()
+      }
+  }
   
   output$plot_align <- renderPlot({
     req(files_to_plot())
     if(length(files_to_plot()) >= 1)
     {
-      plot_alignedPol()
+      plot_alignment()
     }
   })
 
