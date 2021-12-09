@@ -96,8 +96,8 @@ ui <- fluidPage(
     tags$style(
       HTML(".shiny-notification {
            position:fixed;
-           top: calc(30%);
-           left: calc(10%);
+           top: calc(50%);
+           left: calc(50%);
            }
            ")
       )
@@ -650,21 +650,27 @@ server <- function(input, output, session) {
   
   ### OUTPUT
   
-  # show notification if align is pressed but no files to align were set (by x- anchor and baseline)
-  observeEvent(input$align,{
-    if(is.null(val$files_to_align)){
-      showNotification(paste("Please be sure to have set x-anchor and baseline of the plots you want to align"),
-                       duration = Null, type = "error")
-    }
-  })
-  
-  # show notification if show fluorescence is selected but there is no fluorescence signal
+   # show notification if show fluorescence is selected but there is no fluorescence signal
   observeEvent(input$show_fl,{
-    if(is.null(fluorescence())){
-      showNotification(paste("Your file does not contain the column SampleFluor."),
+    if(is.null(fluorescence()) & input$show_fl){
+      showNotification("Your file does not contain the column SampleFluor.",
                        duration = NULL, type = "error")
     }
   })
+  
+  # show notification if "Show fluorescence" was selected for alignment but there was not baseline set for at least on fluorescence signal
+  observeEvent(input$show_fl_al,{
+    if(is.null(val$baseline_fl) & input$show_fl_al){
+      showNotification("You did not set a baseline for your fluorescence profiles.",
+                       duration = NULL, type = "error")
+    }else{
+      if( !all( files_to_plot() %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+        showNotification("Some of your fluorescence profiles do not have a baseline.",
+                         duration = NULL, type = "error")
+      }
+    }
+  })
+ 
   
   ## plot individual profiles
   plot_singleFl <-function(){
