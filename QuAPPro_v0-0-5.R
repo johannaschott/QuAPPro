@@ -671,6 +671,20 @@ server <- function(input, output, session) {
     }
   })
  
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_length,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+    }
+  })
+  
+  observeEvent(input$normalize_height,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+    }
+  })
   
   ## plot individual profiles
   plot_singleFl <-function(){
