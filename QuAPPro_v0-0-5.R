@@ -655,22 +655,51 @@ server <- function(input, output, session) {
     if(is.null(fluorescence()) & input$show_fl){
       showNotification("Your file does not contain the column SampleFluor.",
                        duration = NULL, type = "error")
+      updateCheckboxInput(session, "show_fl", value = FALSE)  
     }
   })
   
-  # show notification if "Show fluorescence" was selected for alignment but there was not baseline set for at least on fluorescence signal
+  # show notification if "Show fluorescence" was selected for alignment 
+  # but there is not fluorescence signal
+  # or there was not baseline set for at least on fluorescence signal
   observeEvent(input$show_fl_al,{
-    if(is.null(val$baseline_fl) & input$show_fl_al){
-      showNotification("You did not set a baseline for your fluorescence profiles.",
+    if( is.null(values_fluorescence() ) & input$show_fl_al){
+      showNotification("Your aligned profiles do not contain a fluorescence signal.",
                        duration = NULL, type = "error")
+      updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
+      if(is.null(val$baseline_fl) & input$show_fl_al){
+        showNotification("You did not set a baseline for your fluorescence profiles.",
+                         duration = NULL, type = "error")
+        updateCheckboxInput(session, "show_fl_al", value = FALSE)
+      }
       if( !all( files_to_plot() %in% names(val$baseline_fl) ) & input$show_fl_al  ){
         showNotification("Some of your fluorescence profiles do not have a baseline.",
                          duration = NULL, type = "error")
+        updateCheckboxInput(session, "show_fl_al", value = FALSE)
       }
     }
+    
+    
   })
  
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_length,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_length", value = FALSE)
+    }
+  })
+  
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_height,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_height", value = FALSE)
+    }
+  })
   
   ## plot individual profiles
   plot_singleFl <-function(){
