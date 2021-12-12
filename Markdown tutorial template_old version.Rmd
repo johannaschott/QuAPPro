@@ -42,6 +42,8 @@ III.	**Alignment table** – The adjusted profile values are displayed as consta
 ### 2.1.	Loading polysome profiles {#subparagraph1}
 The user can upload one profile at a time by clicking the “Browse” button and selecting a .pks file as produced by the Peaktrak software of a Teledyne Isco fractionator. When a profile is loaded, it is available in the “Select files” dropdown menu throughout the whole session. The selected profile is plotted in the plotting area with the filename as title. The user can change the axis settings of the plotting area at any time. 
 
+### we can think about inserting some code snippets displaying buttons, or just leave the manual as plain text
+
 ```{r load, echo=FALSE}
 inputPanel(
 fileInput("input_data", "Upload pks or csv file")
