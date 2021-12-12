@@ -209,6 +209,7 @@ ui <- fluidPage(
                       tags$h6("(Baseline and x-anchor need to be set)"),
                       selectInput("select_alignment", "Files ready to align", choices = c(), width = '100%'),
                       # actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      tags$h6("Change order of profiles in alignment plot"),
                       fluidRow(
                         column(6, actionButton("up", "up", icon = icon("angle-double-up"), width = '100%')),
                         column(6, actionButton("down", "down", icon = icon("angle-double-down"), width = '100%'))),
