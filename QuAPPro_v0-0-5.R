@@ -664,11 +664,21 @@ server <- function(input, output, session) {
   
   ### OUTPUT
   
-   # show notification if show fluorescence is selected but there is no fluorescence signal
-  observeEvent(input$show_fl,{
-    if(is.null(fluorescence()) & input$show_fl){
-      showNotification("Your file does not contain the column SampleFluor.",
-                       duration = NULL, type = "error")
+   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
+    # notification gets triggerd by (1) switching to a file without fluorescence or (2) by ticking the show fluorescence box without
+    # having selected a file with fluoresence signal
+    # (1)
+  observeEvent(input$select,{
+    if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
+      showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
+                       duration = 5, type = "error")
+    }
+  })
+    # (2)
+    observeEvent(input$show_fl,{
+    if(!("SampleFluor" %in% colnames(file_plot()))){
+      showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
+                       duration = 5, type = "error")
     }
   })
   
@@ -781,7 +791,7 @@ server <- function(input, output, session) {
   
   plot_singleInput <- function(){
     if(!is.null(xvalue())){
-      if(input$show_fl){
+      if(input$show_fl && ("SampleFluor" %in% colnames(file_plot()))){
         if(val$buttons == 6){
           layout(matrix(2:1, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
           plot_singlePol()
