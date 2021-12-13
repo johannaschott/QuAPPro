@@ -100,7 +100,7 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-      )
+    )
   ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
@@ -117,18 +117,18 @@ ui <- fluidPage(
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
                       
-      
+                      
                       
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
                       fluidRow(tags$h5(tags$strong("Fluorescence")),
                                
-                        # show fluorescence signal or not?
-                        checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
-                        
-                        column(6,
-                               numericInput("axis1_fl", "Set y min", value = NULL)),
-                        column(6,
-                               numericInput("axis2_fl", "Set y max", value = NULL))),
+                               # show fluorescence signal or not?
+                               checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
+                               
+                               column(6,
+                                      numericInput("axis1_fl", "Set y min", value = NULL)),
+                               column(6,
+                                      numericInput("axis2_fl", "Set y max", value = NULL))),
                       
                       # introduce a slider for smoothing of the fluorescence signal
                       fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
@@ -136,7 +136,7 @@ ui <- fluidPage(
                       
                       # set a separate baseline for the fluorescence signal
                       fluidRow(
-                              column(6,actionButton("baseline_fl", "Set baseline", width = '100%'))),
+                        column(6,actionButton("baseline_fl", "Set baseline", width = '100%'))),
                       
                       fluidRow(tags$h5(tags$strong("Polysome profile")),
                                column(6,
@@ -151,8 +151,8 @@ ui <- fluidPage(
                                numericInput("axis4", "Set x max", value = NULL))),
                       
                       fluidRow(
-                               column(6,actionButton("baseline", "Set baseline", width = '100%')),
-                               column(6,actionButton("x_anchor", "Set x-anchor", width = '100%')) ),
+                        column(6,actionButton("baseline", "Set baseline", width = '100%')),
+                        column(6,actionButton("x_anchor", "Set x-anchor", width = '100%')) ),
                       # checkbox determining if lines are displayed in the plot
                       checkboxInput("red_lines", "Show baseline and x-anchor", value = TRUE, width = NULL)),
                # display plot area with click option
@@ -163,7 +163,7 @@ ui <- fluidPage(
                       fluidRow(tags$h5(tags$strong("Fluorescence")),
                                
                                # show fluorescence signal or not?
-                                checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
+                               checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
                                
                                column(6,
                                       numericInput("axis1_a_fl", "Set y min", value = NULL)),
@@ -330,6 +330,10 @@ server <- function(input, output, session) {
         fl_control_baseline = list()
     )
   
+  val <- reactiveValues(
+    file_types = vector()
+  )
+  
   ### INITIAL LOADED FILES
   # update select output field with the name of every newly loaded file
   observe({
@@ -341,12 +345,17 @@ server <- function(input, output, session) {
     req(input$select)
     
     if((grepl(".pks",as.character(input$select)) == T)){
-      val$factors_list[[input$select]] <- (0.1/60)}else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-        val$factors_list[[input$select]] <- (0.32/60)}else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.1/60)
+      val$file_types[input$select] <- "pks"
+      }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
+        val$factors_list[[input$select]] <- (0.32/60)
+        val$file_types[input$select] <- "csv_fluo" 
+        }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
           val$factors_list[[input$select]] <- (0.2/60)
+          val$file_types[input$select] <- "csv" 
           print(val$factors_list[[input$select]])
         }
-    })
+  })
   # when an input file is selected store the path to the selected file name as current_path
   current_path <- reactive({
     val$paths_collected[input$input_data$name] <- input$input_data$datapath
@@ -358,10 +367,11 @@ server <- function(input, output, session) {
     #require that the input is available
     req(input$select) 
     if(grepl(".pks",as.character(input$select)) == T){
-      read.table(current_path(), dec = ",", header = F)}else if(grepl(".csv",as.character(input$select)) == T){
+        read.table(current_path(), dec = ",", header = F)
+      }else if(grepl(".csv",as.character(input$select)) == T){
         start <- grep("Data Columns:", readLines(current_path()))
-        read.csv(current_path(), skip = start)}
-    
+        read.csv(current_path(), skip = start)
+     }
   })
   
   # Setting y and x column values for plotting from the loaded dataset
@@ -454,7 +464,7 @@ server <- function(input, output, session) {
     }else{
       input$axis3
     }})
-
+  
   xmax_single <- reactive({
     if(is.na(input$axis4)){
       max(xvalue())
@@ -605,7 +615,7 @@ server <- function(input, output, session) {
     val$sum_areas[[input$select_area]][input$select] <- (sum(yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline[input$select]))
     
     if(input$show_fl){
-    val$sum_areas[[paste(input$select_area, "_fluo", sep = "")]][input$select] <- (sum(fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline_fl[input$select]))
+      val$sum_areas[[paste(input$select_area, "_fluo", sep = "")]][input$select] <- (sum(fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline_fl[input$select]))
     }
     # create data frame with quantified areas containing NAs for files without respective area
     non.null.list <- lapply(val$sum_areas, lapply, function(x)ifelse(is.null(x), NA, x))
@@ -673,6 +683,7 @@ server <- function(input, output, session) {
     if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
                        duration = 5, type = "error")
+       updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
     # (2)
@@ -680,19 +691,49 @@ server <- function(input, output, session) {
     if(!("SampleFluor" %in% colnames(file_plot()))){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
                        duration = 5, type = "error")
+       updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
   
-  # show notification if "Show fluorescence" was selected for alignment but there was not baseline set for at least on fluorescence signal
+  # show notification if "Show fluorescence" was selected for alignment 
+  # but there is not fluorescence signal
+  # or there was not baseline set for at least on fluorescence signal
   observeEvent(input$show_fl_al,{
-    if(is.null(val$baseline_fl) & input$show_fl_al){
-      showNotification("You did not set a baseline for your fluorescence profiles.",
+    if( is.null(values_fluorescence() ) & input$show_fl_al){
+      showNotification("Your aligned profiles do not contain a fluorescence signal.",
                        duration = NULL, type = "error")
+      updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
+      if(is.null(val$baseline_fl) & input$show_fl_al){
+        showNotification("You did not set a baseline for your fluorescence profiles.",
+                         duration = NULL, type = "error")
+        updateCheckboxInput(session, "show_fl_al", value = FALSE)
+      }
       if( !all( files_to_plot() %in% names(val$baseline_fl) ) & input$show_fl_al  ){
         showNotification("Some of your fluorescence profiles do not have a baseline.",
                          duration = NULL, type = "error")
+        updateCheckboxInput(session, "show_fl_al", value = FALSE)
       }
+    }
+    
+    
+  })
+  
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_length,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_length", value = FALSE)
+    }
+  })
+  
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_height,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
  
@@ -787,8 +828,8 @@ server <- function(input, output, session) {
       abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
     }
   }
-
-
+  
+  
   
   plot_singleInput <- function(){
     if(!is.null(xvalue())){
@@ -848,17 +889,17 @@ server <- function(input, output, session) {
       write.csv2( t(val$df_quant), file, row.names = T)
     }
   )
-
-
-
-
+  
+  
+  
+  
   # Create alignment plot
   
   # Opportunity to remove and add files again to files_to_plot vector
   files_to_plot <- reactive({
     val$files_to_align[!val$files_to_align %in% val$remove_files_list]
   })
-    
+  
   # move files up or down in the val$files_to_align vector
   observeEvent(input$up, {
     to_be_shifted <- which( val$files_to_align == input$select_alignment )
@@ -882,7 +923,7 @@ server <- function(input, output, session) {
       val$files_to_align <- val$files_to_align[files_order]
     }
   })
-   
+  
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
     dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3")
@@ -942,14 +983,19 @@ server <- function(input, output, session) {
   
   # determine normalized y-values of fluorescence
   values_fluorescence <- reactive({
-    dummy <- list()
-    for(f in files_to_plot())
+    if(any(val$file_types[files_to_plot()] == "csv_fluo") )
     {
-      start <- grep("Data Columns:", readLines(val$paths_collected[f]))
-      fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
-      dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
+      dummy <- list()
+      for(f in files_to_plot()[val$file_types[files_to_plot()] == "csv_fluo" ])
+      {
+        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
+        fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
+        dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
+      }
+      dummy
+    }else{  
+      NULL
     }
-    dummy
   })
   
   
@@ -1008,7 +1054,7 @@ server <- function(input, output, session) {
     profile_heights <- sapply(values_list()[files_to_plot()], FUN = max)
     max(profile_heights )
   })
-    
+  
   # find maximum of y-axis values for fluorescence profiles
   ymax_all_fl <- reactive({
     profile_heights <- sapply(values_fluorescence()[files_to_plot()], FUN = max)
@@ -1109,12 +1155,12 @@ server <- function(input, output, session) {
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
       points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
-           lwd = linewidth_vector()[f], col = colors_vector()[f])
+             lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
     legend("topright", legend = files_to_plot(), lty = lines_vector()[files_to_plot()], 
            lwd = linewidth_vector()[files_to_plot()], col = colors_vector()[files_to_plot()],
            bty = "n"
-           )
+    )
   }
   
   plot_alignedFluo <- function(){
@@ -1145,15 +1191,15 @@ server <- function(input, output, session) {
              lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
   }
-
+  
   plot_alignment <- function(){
-      if(input$show_fl_al){
-        layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
-        plot_alignedFluo()
-        plot_alignedPol()
-      }else{
-        plot_alignedPol()
-      }
+    if(input$show_fl_al){
+      layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
+      plot_alignedFluo()
+      plot_alignedPol()
+    }else{
+      plot_alignedPol()
+    }
   }
   
   output$plot_align <- renderPlot({
@@ -1163,7 +1209,7 @@ server <- function(input, output, session) {
       plot_alignment()
     }
   })
-
+  
   # Enable download of current plot as pdf
   
   output$downloadPlot <- downloadHandler(
