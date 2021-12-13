@@ -105,7 +105,7 @@ ui <- fluidPage(
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
-    tabPanel(tags$strong("Analysis profiles"), icon = icon("area-chart"),
+    tabPanel(tags$strong("Analysis profiles"), icon = icon("chart-area"), # updated to newer version
              fluidRow(column(6, tags$h4(tags$strong("Single profiles for quantification"))),
                       column(6, tags$h4(tags$strong("Multiple aligned profiles")))),
              
@@ -209,6 +209,7 @@ ui <- fluidPage(
                       tags$h6("(Baseline and x-anchor need to be set)"),
                       selectInput("select_alignment", "Files ready to align", choices = c(), width = '100%'),
                       # actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
+                      tags$h6("Change order of profiles in alignment plot"),
                       fluidRow(
                         column(6, actionButton("up", "up", icon = icon("angle-double-up"), width = '100%')),
                         column(6, actionButton("down", "down", icon = icon("angle-double-down"), width = '100%'))),
@@ -322,6 +323,12 @@ server <- function(input, output, session) {
   val <- reactiveValues(
     factors_list = list()
   )
+  val <- reactiveValues(
+        control_baseline = list()
+    )
+    val <- reactiveValues(
+        fl_control_baseline = list()
+    )
   
   val <- reactiveValues(
     file_types = vector()
@@ -593,6 +600,14 @@ server <- function(input, output, session) {
   # Calculate sum of yvalues to quantify areas when button is pressed and required values were set before
   observeEvent(input$quantify_area,{
     req(val$file_starts[[input$select]], val$file_ends[[input$select]], val$baseline[input$select])
+    
+    # store file baselines for quantified areas to be displayed in the plotting area even when baseline is changed again by the user
+     if(isTruthy(val$baseline_fl[input$select])){
+            val$fl_control_baseline[[input$select_area]][input$select] <- val$baseline_fl[input$select]
+        }
+        
+        val$control_baseline[[input$select_area]][input$select] <- val$baseline[input$select]
+    
     x_first <- round(val$file_starts[[input$select]])*val$factors_list[[input$select]]
     x_last <- round(val$file_ends[[input$select]])*val$factors_list[[input$select]]
     # sum up all values from start to end area and subtract baseline, assign area name selected by user
@@ -660,12 +675,23 @@ server <- function(input, output, session) {
   
   ### OUTPUT
   
-  # show notification if show fluorescence is selected but there is no fluorescence signal
-  observeEvent(input$show_fl,{
-    if(is.null(fluorescence()) & input$show_fl){
-      showNotification("Your file does not contain the column SampleFluor.",
-                       duration = NULL, type = "error")
-      updateCheckboxInput(session, "show_fl", value = FALSE)  
+   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
+    # notification gets triggerd by (1) switching to a file without fluorescence or (2) by ticking the show fluorescence box without
+    # having selected a file with fluoresence signal
+    # (1)
+  observeEvent(input$select,{
+    if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
+      showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
+                       duration = 5, type = "error")
+       updateCheckboxInput(session, "show_fl", value = FALSE)
+    }
+  })
+    # (2)
+    observeEvent(input$show_fl,{
+    if(!("SampleFluor" %in% colnames(file_plot()))){
+      showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
+                       duration = 5, type = "error")
+       updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
   
@@ -710,6 +736,21 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
+ 
+  # show notification when normalization to length or height is set but total area is missing
+  observeEvent(input$normalize_length,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+    }
+  })
+  
+  observeEvent(input$normalize_height,{
+    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
+      showNotification("Please select a total area for all profiles in the alignment.",
+                       duration = NULL, type = "error")
+    }
+  })
   
   ## plot individual profiles
   plot_singleFl <-function(){
@@ -731,9 +772,13 @@ server <- function(input, output, session) {
       x_first <- round(val$area_starts[[input$select_area]][input$select])*val$factors_list[[input$select]]
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
-      polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-              c(val$baseline_fl[input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$baseline_fl[input$select]),
-              col = "#c7e9c0", border = "darkgreen")
+       # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
+       # until the button "quantify area" is pressed again.
+            if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
+                polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                        c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
+                        col = "#c7e9c0", border = "darkgreen")
+            }
     }
     if(input$green_lines){
       abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
@@ -766,9 +811,11 @@ server <- function(input, output, session) {
       x_first <- round(val$area_starts[[input$select_area]][input$select])*val$factors_list[[input$select]]
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
-      polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-              c(val$baseline[input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$baseline[input$select]),
-              col = "#c7e9c0", border = "black")
+      if(isTruthy(val$control_baseline[[input$select_area]][input$select])){
+                    polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                            c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
+                            col = "#c7e9c0", border = "black")
+                }
     }
     # selected x-anchor and baseline are displayed if box is ticked
     if(input$red_lines){
@@ -786,7 +833,7 @@ server <- function(input, output, session) {
   
   plot_singleInput <- function(){
     if(!is.null(xvalue())){
-      if(input$show_fl){
+      if(input$show_fl && ("SampleFluor" %in% colnames(file_plot()))){
         if(val$buttons == 6){
           layout(matrix(2:1, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
           plot_singlePol()
