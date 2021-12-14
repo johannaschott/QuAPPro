@@ -324,11 +324,11 @@ server <- function(input, output, session) {
     factors_list = list()
   )
   val <- reactiveValues(
-        control_baseline = list()
-    )
-    val <- reactiveValues(
-        fl_control_baseline = list()
-    )
+    control_baseline = list()
+  )
+  val <- reactiveValues(
+    fl_control_baseline = list()
+  )
   
   val <- reactiveValues(
     file_types = vector()
@@ -347,14 +347,14 @@ server <- function(input, output, session) {
     if((grepl(".pks",as.character(input$select)) == T)){
       val$factors_list[[input$select]] <- (0.1/60)
       val$file_types[input$select] <- "pks"
-      }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-        val$factors_list[[input$select]] <- (0.32/60)
-        val$file_types[input$select] <- "csv_fluo" 
-        }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
-          val$factors_list[[input$select]] <- (0.2/60)
-          val$file_types[input$select] <- "csv" 
-          print(val$factors_list[[input$select]])
-        }
+    }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.32/60)
+      val$file_types[input$select] <- "csv_fluo" 
+    }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.2/60)
+      val$file_types[input$select] <- "csv" 
+      print(val$factors_list[[input$select]])
+    }
   })
   # when an input file is selected store the path to the selected file name as current_path
   current_path <- reactive({
@@ -367,11 +367,11 @@ server <- function(input, output, session) {
     #require that the input is available
     req(input$select) 
     if(grepl(".pks",as.character(input$select)) == T){
-        read.table(current_path(), dec = ",", header = F)
-      }else if(grepl(".csv",as.character(input$select)) == T){
-        start <- grep("Data Columns:", readLines(current_path()))
-        read.csv(current_path(), skip = start)
-     }
+      read.table(current_path(), dec = ",", header = F)
+    }else if(grepl(".csv",as.character(input$select)) == T){
+      start <- grep("Data Columns:", readLines(current_path()))
+      read.csv(current_path(), skip = start)
+    }
   })
   
   # Setting y and x column values for plotting from the loaded dataset
@@ -388,7 +388,6 @@ server <- function(input, output, session) {
   fluorescence <- reactive({
     req(input$select) 
     req(input$show_fl)
-    # one condition missing!!
     if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
       smooth_profile( file_plot()[ ,3], input$slider1 )}
     
@@ -602,11 +601,11 @@ server <- function(input, output, session) {
     req(val$file_starts[[input$select]], val$file_ends[[input$select]], val$baseline[input$select])
     
     # store file baselines for quantified areas to be displayed in the plotting area even when baseline is changed again by the user
-     if(isTruthy(val$baseline_fl[input$select])){
-            val$fl_control_baseline[[input$select_area]][input$select] <- val$baseline_fl[input$select]
-        }
-        
-        val$control_baseline[[input$select_area]][input$select] <- val$baseline[input$select]
+    if(isTruthy(val$baseline_fl[input$select])){
+      val$fl_control_baseline[[input$select_area]][input$select] <- val$baseline_fl[input$select]
+    }
+    
+    val$control_baseline[[input$select_area]][input$select] <- val$baseline[input$select]
     
     x_first <- round(val$file_starts[[input$select]])*val$factors_list[[input$select]]
     x_last <- round(val$file_ends[[input$select]])*val$factors_list[[input$select]]
@@ -675,23 +674,21 @@ server <- function(input, output, session) {
   
   ### OUTPUT
   
-   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
-    # notification gets triggerd by (1) switching to a file without fluorescence or (2) by ticking the show fluorescence box without
-    # having selected a file with fluoresence signal
-    # (1)
+  
+  # show_fl is deselected when a new file is selected that does not contain fluorescence
+  # no warning or error is shown
   observeEvent(input$select,{
     if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
-      showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
-                       duration = 5, type = "error")
-       updateCheckboxInput(session, "show_fl", value = FALSE)
+      updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
-    # (2)
-    observeEvent(input$show_fl,{
-    if(!("SampleFluor" %in% colnames(file_plot()))){
+  
+  # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
+  observeEvent(input$show_fl,{
+    if(!("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
-                       duration = 5, type = "error")
-       updateCheckboxInput(session, "show_fl", value = FALSE)
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
   
@@ -699,25 +696,39 @@ server <- function(input, output, session) {
   # but there is not fluorescence signal
   # or there was not baseline set for at least on fluorescence signal
   observeEvent(input$show_fl_al,{
-    if( is.null(values_fluorescence() ) & input$show_fl_al){
-      showNotification("Your aligned profiles do not contain a fluorescence signal.",
+    if( !any( val$file_types[files_to_plot()] == "csv_fluo") & input$show_fl_al){
+      showNotification("None of your aligned profiles contains a fluorescence signal (column 'SampleFluor').",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
-      if(is.null(val$baseline_fl) & input$show_fl_al){
-        showNotification("You did not set a baseline for your fluorescence profiles.",
-                         duration = NULL, type = "error")
-        updateCheckboxInput(session, "show_fl_al", value = FALSE)
-      }
-      if( !all( files_to_plot() %in% names(val$baseline_fl) ) & input$show_fl_al  ){
-        showNotification("Some of your fluorescence profiles do not have a baseline.",
-                         duration = NULL, type = "error")
-        updateCheckboxInput(session, "show_fl_al", value = FALSE)
+      if( !all( val$file_types[files_to_plot()] == "csv_fluo") & input$show_fl_al  ){
+        showNotification("Some of your aligned profiles do not contain a fluorescence signal (column 'SampleFluor').",
+                         duration = NULL, type = "warning")
       }
     }
     
-    
+    if(any( val$file_types[files_to_plot()] == "csv_fluo") & is.null(val$baseline_fl) & input$show_fl_al){
+      showNotification("You did not set a baseline for your fluorescence profiles.",
+                       duration = NULL, type = "error")
+      updateCheckboxInput(session, "show_fl_al", value = FALSE)
+    }else{
+      if( any( val$file_types[files_to_plot()] == "csv_fluo") & !all( files_to_plot()[val$file_types == "csv_fluo"] %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+        showNotification("Some of your fluorescence profiles do not have a baseline.",
+                         duration = NULL, type = "warning")
+      }
+    }
   })
+  
+  # show notification if how fluorescence was selected already but a new file in files_to_plot()
+  # does not contain a fluorescence signal
+  observeEvent(files_to_plot(), {
+    if( !all( files_to_plot()[val$file_types == "csv_fluo"] %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+      showNotification("Some of your fluorescence profiles do not have a baseline.",
+                       duration = NULL, type = "warning")
+    }
+  })
+  
+    
   
   # show notification when normalization to length or height is set but total area is missing
   observeEvent(input$normalize_length,{
@@ -736,7 +747,7 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
- 
+  
   # show notification when normalization to length or height is set but total area is missing
   observeEvent(input$normalize_length,{
     if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
@@ -772,13 +783,13 @@ server <- function(input, output, session) {
       x_first <- round(val$area_starts[[input$select_area]][input$select])*val$factors_list[[input$select]]
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
-       # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
-       # until the button "quantify area" is pressed again.
-            if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
-                polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                        c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
-                        col = "#c7e9c0", border = "darkgreen")
-            }
+      # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
+      # until the button "quantify area" is pressed again.
+      if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
+        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
+                col = "#c7e9c0", border = "darkgreen")
+      }
     }
     if(input$green_lines){
       abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
@@ -812,10 +823,10 @@ server <- function(input, output, session) {
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
       if(isTruthy(val$control_baseline[[input$select_area]][input$select])){
-                    polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                            c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
-                            col = "#c7e9c0", border = "black")
-                }
+        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
+                col = "#c7e9c0", border = "black")
+      }
     }
     # selected x-anchor and baseline are displayed if box is ticked
     if(input$red_lines){
@@ -981,12 +992,12 @@ server <- function(input, output, session) {
     dummy
   })
   
-  # determine normalized y-values of fluorescence
+  # determine normalized y-values of fluorescence, only for files with baseline
   values_fluorescence <- reactive({
     if(any(val$file_types[files_to_plot()] == "csv_fluo") )
     {
       dummy <- list()
-      for(f in files_to_plot()[val$file_types[files_to_plot()] == "csv_fluo" ])
+      for(f in names(val$baseline_fl)) # only go through fluorescence signals with baseline
       {
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
@@ -1063,7 +1074,7 @@ server <- function(input, output, session) {
   
   # axis labels are modified if there are more than three numerals
   lost_num_al_fl <- reactive({
-    max_numeral <- max( floor(log10(abs( unlist(values_fluorescence()[files_to_plot()] ) ))) + 1 ) # how many numerals has the maximum UV absorption?
+    max_numeral <- max( floor(log10(abs( unlist(values_fluorescence()[intersect( files_to_plot(), names(val$baseline_fl) ) ] ) ))) + 1 ) # how many numerals has the maximum UV absorption?
     
     if(max_numeral > 2 ){
       10^(max_numeral - 2)
@@ -1171,7 +1182,8 @@ server <- function(input, output, session) {
       ylab <- paste("Fluo. (x ", lost_num_al_fl(), ")", sep = "")
     }
     
-    f <- files_to_plot()[1]
+    files_in_al_fluo <- files_to_plot()[files_to_plot() %in% intersect(names(val$baseline_fl),  names(val$baseline))] # this is necessary to maintain the order as given by files_to_plot()
+    f <-  files_in_al_fluo[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(0, 4, 0.5, 2)) 
     plot(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f],
@@ -1184,7 +1196,7 @@ server <- function(input, output, session) {
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
     
-    for(f in files_to_plot()[-1])
+    for(f in  files_in_al_fluo[-1])
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
       points(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f], 
@@ -1227,3 +1239,4 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 ###############
+
