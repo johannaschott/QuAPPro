@@ -673,6 +673,14 @@ server <- function(input, output, session) {
     val$linewidth_collected[[input$select_alignment]] <- linewidth_selected
   })
   
+  # update color, line type and width to the values of the selected profiles
+  observeEvent(input$select_alignment, {
+    req(input$select_alignment)
+    updateColourInput(session, "color", value = colors_vector()[[input$select_alignment]])
+    updateColourInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]])
+    updateColourInput(session, "linetype", value = lines_vector()[[input$select_alignment]])
+  })
+    
   ### OUTPUT
   
    # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
