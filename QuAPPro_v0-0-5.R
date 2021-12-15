@@ -100,8 +100,8 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-    )
-  ),
+      )
+      ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
@@ -728,11 +728,12 @@ server <- function(input, output, session) {
     }
   })
   
-    
+  
   
   # show notification when normalization to length or height is set but total area is missing
   observeEvent(input$normalize_length,{
-    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
+    files_with_total <- names(val$sum_areas[["Total"]])
+    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_length ){
       showNotification("Please select a total area for all profiles in the alignment.",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "normalize_length", value = FALSE)
@@ -741,7 +742,8 @@ server <- function(input, output, session) {
   
   # show notification when normalization to length or height is set but total area is missing
   observeEvent(input$normalize_height,{
-    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
+    files_with_total <- names(val$sum_areas[["Total"]])
+    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_height ){
       showNotification("Please select a total area for all profiles in the alignment.",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "normalize_height", value = FALSE)
@@ -749,17 +751,21 @@ server <- function(input, output, session) {
   })
   
   # show notification when normalization to length or height is set but total area is missing
-  observeEvent(input$normalize_length,{
-    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
-      showNotification("Please select a total area for all profiles in the alignment.",
+  observeEvent(files_to_plot(),{
+    files_with_total <- names(val$sum_areas[["Total"]])
+    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_length ){
+      showNotification("Some profiles in the alignment do not have a total area.",
                        duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_length", value = FALSE)
     }
   })
   
-  observeEvent(input$normalize_height,{
-    if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_height ){
-      showNotification("Please select a total area for all profiles in the alignment.",
+  observeEvent(files_to_plot(),{
+    files_with_total <- names(val$sum_areas[["Total"]])
+    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_height ){
+      showNotification("Some profiles in the alignment do not have a total area.",
                        duration = NULL, type = "error")
+      updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
   
@@ -968,10 +974,11 @@ server <- function(input, output, session) {
   # for normalization of surfaces:
   norm_factor <- reactive({
     dummy <- vector()
+    files_with_total <- names( val$sum_areas[["Total"]])
     for(f in files_to_plot()){
-      if((!is.null(val$sum_areas[["Total"]][f])) & input$normalize_height){
+      if((f %in% files_with_total) & input$normalize_height){
         # normalization y-values
-        dummy[f] <- val$sum_areas[["Total"]][f]/val$sum_areas[["Total"]][files_to_plot()[1]]
+        dummy[f] <- val$sum_areas[["Total"]][f]/val$sum_areas[["Total"]][files_with_total[1]]
       }else{
         dummy[f] <- 1
       }
@@ -982,9 +989,10 @@ server <- function(input, output, session) {
   # for normalization of length:
   norm_factor_x <- reactive({
     dummy <- vector()
+    files_with_total <- names( val$sum_areas[["Total"]])
     for(f in files_to_plot()){
-      if(!is.null(val$sum_areas[["Total"]][f]) & input$normalize_length){
-        dummy[f] <- (round(val$area_ends[["Total"]][f] - val$area_starts[["Total"]][f])/(round(val$area_ends[["Total"]][files_to_plot()[1]] - val$area_starts[["Total"]][files_to_plot()[1]])))
+      if( (f %in% files_with_total) & input$normalize_length){
+        dummy[f] <- (round(val$area_ends[["Total"]][f] - val$area_starts[["Total"]][f])/(round(val$area_ends[["Total"]][files_with_total[1]] - val$area_starts[["Total"]][files_with_total[1]])))
       }else{
         dummy[f] <- 1
       }
@@ -1019,7 +1027,7 @@ server <- function(input, output, session) {
       }else if(val$factors_list[[f]] == (4.8/15)/60){
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         next_y <- read.csv(val$paths_collected[f], skip = start)$AbsA
-      }else if(val$factors_list[f] == (0.2)/60){
+      }else if(val$factors_list[[f]] == (0.2)/60){
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         next_y <- head(read.csv(val$paths_collected[f], skip = start)$Absorbance, -1)
       }
@@ -1142,7 +1150,6 @@ server <- function(input, output, session) {
   #### plotting function for aligned profiles
   
   plot_alignedPol <- function(){
-    
     if(lost_num_al_pol() == 1 ){
       ylab <- "UV abs."
     }else{
@@ -1239,4 +1246,3 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 ###############
-
