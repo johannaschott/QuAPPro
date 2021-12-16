@@ -219,10 +219,11 @@ ui <- fluidPage(
                       
                       colourInput("color", "Change colors for aligned profiles", palette = "square"),
                       selectInput("linetype", "Change linetypes for aligned profiles", choices = c("solid", "dashed", "dotted",
-                                                                                                   "dotdash", "longdash", "twodash"), width = '100%'),
-                      selectInput("linewidth", "Change linewidth for aligned profiles", choices = c("thin", "medium", "bold"), width = '100%'),
-                      fluidRow(column(6, actionButton("remove_file", "Remove file", icon = icon("trash"), width = '100%')),
-                               column(6, actionButton("add_file", "Restore file", icon = icon("trash-restore"), width = '100%')))),
+                                                                                                   "dotdash", "longdash", "twodash"), 
+                                  width = '100%', selected = "solid"),
+                      numericInput("linewidth", "Change linewidth for aligned profiles", value = 1),
+                      fluidRow(column(6, actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')),
+                               column(6, actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')))),
                # Plot display options on the right with plot download button
                column(3,
                       #checkboxInput("peak_help", "Help find max/min for setting lines", value = TRUE, width = NULL),
@@ -666,14 +667,21 @@ server <- function(input, output, session) {
   
   # Let user change linewidths of the different plots (selected out of aligned files)
   observeEvent(input$linewidth, {
-    if(input$linewidth == "thin")linewidth_selected <- 1
-    if(input$linewidth == "medium")linewidth_selected <- 2
-    if(input$linewidth == "bold")linewidth_selected <- 3
-    val$linewidth_collected[[input$select_alignment]] <- linewidth_selected
+    val$linewidth_collected[[input$select_alignment]] <- input$linewidth
   })
   
-  ### OUTPUT
+  # update color, line type and width to the values of the selected profiles
+  observeEvent(input$select_alignment, {
+    req(input$select_alignment)
+    updateColourInput(session, "color", value = colors_vector()[[input$select_alignment]])
+    updateNumericInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]]  )
+    updateSelectInput(session, "linetype", 
+                      selected = c("solid", "dashed", "dotted",
+                                   "dotdash", "longdash", "twodash")[ lines_vector()[[input$select_alignment]] ])
+  })
   
+  
+  ### OUTPUT
   
   # show_fl is deselected when a new file is selected that does not contain fluorescence
   # no warning or error is shown
