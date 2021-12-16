@@ -100,8 +100,8 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-      )
-      ),
+    )
+  ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
@@ -712,7 +712,7 @@ server <- function(input, output, session) {
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
-      if( any( val$file_types[files_to_plot()] == "csv_fluo") & !all( files_to_plot()[val$file_types == "csv_fluo"] %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+      if( any( val$file_types[files_to_plot()] == "csv_fluo") & !all( names(val$file_types[files_to_plot()] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
         showNotification("Some of your fluorescence profiles do not have a baseline.",
                          duration = NULL, type = "warning")
       }
@@ -722,7 +722,7 @@ server <- function(input, output, session) {
   # show notification if how fluorescence was selected already but a new file in files_to_plot()
   # does not contain a fluorescence signal
   observeEvent(files_to_plot(), {
-    if( !all( files_to_plot()[val$file_types == "csv_fluo"] %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+    if( !all( names(val$file_types[files_to_plot()] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
       showNotification("Some of your fluorescence profiles do not have a baseline.",
                        duration = NULL, type = "warning")
     }
