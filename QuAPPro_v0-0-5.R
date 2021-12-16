@@ -219,10 +219,11 @@ ui <- fluidPage(
                       
                       colourInput("color", "Change colors for aligned profiles", palette = "square"),
                       selectInput("linetype", "Change linetypes for aligned profiles", choices = c("solid", "dashed", "dotted",
-                                                                                                   "dotdash", "longdash", "twodash"), width = '100%'),
-                      selectInput("linewidth", "Change linewidth for aligned profiles", choices = c("thin", "medium", "bold"), width = '100%'),
-                      fluidRow(column(6, actionButton("remove_file", "Remove file", icon = icon("trash"), width = '100%')),
-                               column(6, actionButton("add_file", "Restore file", icon = icon("trash-restore"), width = '100%')))),
+                                                                                                   "dotdash", "longdash", "twodash"), 
+                                  width = '100%', selected = "solid"),
+                      numericInput("linewidth", "Change linewidth for aligned profiles", value = 1),
+                      fluidRow(column(6, actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')),
+                               column(6, actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')))),
                # Plot display options on the right with plot download button
                column(3,
                       #checkboxInput("peak_help", "Help find max/min for setting lines", value = TRUE, width = NULL),
@@ -324,11 +325,11 @@ server <- function(input, output, session) {
     factors_list = list()
   )
   val <- reactiveValues(
-        control_baseline = list()
-    )
-    val <- reactiveValues(
-        fl_control_baseline = list()
-    )
+    control_baseline = list()
+  )
+  val <- reactiveValues(
+    fl_control_baseline = list()
+  )
   
   val <- reactiveValues(
     file_types = vector()
@@ -347,14 +348,14 @@ server <- function(input, output, session) {
     if((grepl(".pks",as.character(input$select)) == T)){
       val$factors_list[[input$select]] <- (0.1/60)
       val$file_types[input$select] <- "pks"
-      }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-        val$factors_list[[input$select]] <- (0.32/60)
-        val$file_types[input$select] <- "csv_fluo" 
-        }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
-          val$factors_list[[input$select]] <- (0.2/60)
-          val$file_types[input$select] <- "csv" 
-          print(val$factors_list[[input$select]])
-        }
+    }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.32/60)
+      val$file_types[input$select] <- "csv_fluo" 
+    }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.2/60)
+      val$file_types[input$select] <- "csv" 
+      print(val$factors_list[[input$select]])
+    }
   })
   # when an input file is selected store the path to the selected file name as current_path
   current_path <- reactive({
@@ -367,11 +368,11 @@ server <- function(input, output, session) {
     #require that the input is available
     req(input$select) 
     if(grepl(".pks",as.character(input$select)) == T){
-        read.table(current_path(), dec = ",", header = F)
-      }else if(grepl(".csv",as.character(input$select)) == T){
-        start <- grep("Data Columns:", readLines(current_path()))
-        read.csv(current_path(), skip = start)
-     }
+      read.table(current_path(), dec = ",", header = F)
+    }else if(grepl(".csv",as.character(input$select)) == T){
+      start <- grep("Data Columns:", readLines(current_path()))
+      read.csv(current_path(), skip = start)
+    }
   })
   
   # Setting y and x column values for plotting from the loaded dataset
@@ -602,11 +603,11 @@ server <- function(input, output, session) {
     req(val$file_starts[[input$select]], val$file_ends[[input$select]], val$baseline[input$select])
     
     # store file baselines for quantified areas to be displayed in the plotting area even when baseline is changed again by the user
-     if(isTruthy(val$baseline_fl[input$select])){
-            val$fl_control_baseline[[input$select_area]][input$select] <- val$baseline_fl[input$select]
-        }
-        
-        val$control_baseline[[input$select_area]][input$select] <- val$baseline[input$select]
+    if(isTruthy(val$baseline_fl[input$select])){
+      val$fl_control_baseline[[input$select_area]][input$select] <- val$baseline_fl[input$select]
+    }
+    
+    val$control_baseline[[input$select_area]][input$select] <- val$baseline[input$select]
     
     x_first <- round(val$file_starts[[input$select]])*val$factors_list[[input$select]]
     x_last <- round(val$file_ends[[input$select]])*val$factors_list[[input$select]]
@@ -667,39 +668,39 @@ server <- function(input, output, session) {
   
   # Let user change linewidths of the different plots (selected out of aligned files)
   observeEvent(input$linewidth, {
-    if(input$linewidth == "thin")linewidth_selected <- 1
-    if(input$linewidth == "medium")linewidth_selected <- 2
-    if(input$linewidth == "bold")linewidth_selected <- 3
-    val$linewidth_collected[[input$select_alignment]] <- linewidth_selected
+    val$linewidth_collected[[input$select_alignment]] <- input$linewidth
   })
   
   # update color, line type and width to the values of the selected profiles
   observeEvent(input$select_alignment, {
     req(input$select_alignment)
     updateColourInput(session, "color", value = colors_vector()[[input$select_alignment]])
-    updateColourInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]])
-    updateColourInput(session, "linetype", value = lines_vector()[[input$select_alignment]])
+    updateNumericInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]]  )
+    updateSelectInput(session, "linetype", 
+                      selected = c("solid", "dashed", "dotted",
+                                   "dotdash", "longdash", "twodash")[ lines_vector()[[input$select_alignment]] ])
   })
-    
+  
+  
   ### OUTPUT
   
-   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
-    # notification gets triggerd by (1) switching to a file without fluorescence or (2) by ticking the show fluorescence box without
-    # having selected a file with fluoresence signal
-    # (1)
+  # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
+  # notification gets triggerd by (1) switching to a file without fluorescence or (2) by ticking the show fluorescence box without
+  # having selected a file with fluoresence signal
+  # (1)
   observeEvent(input$select,{
     if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
                        duration = 5, type = "error")
-       updateCheckboxInput(session, "show_fl", value = FALSE)
+      updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
-    # (2)
-    observeEvent(input$show_fl,{
+  # (2)
+  observeEvent(input$show_fl,{
     if(!("SampleFluor" %in% colnames(file_plot()))){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
                        duration = 5, type = "error")
-       updateCheckboxInput(session, "show_fl", value = FALSE)
+      updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
   
@@ -744,7 +745,7 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
- 
+  
   # show notification when normalization to length or height is set but total area is missing
   observeEvent(input$normalize_length,{
     if(any( is.null( val$sum_areas[["Total"]][files_to_plot()]) ) & input$normalize_length ){
@@ -780,13 +781,13 @@ server <- function(input, output, session) {
       x_first <- round(val$area_starts[[input$select_area]][input$select])*val$factors_list[[input$select]]
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
-       # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
-       # until the button "quantify area" is pressed again.
-            if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
-                polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                        c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
-                        col = "#c7e9c0", border = "darkgreen")
-            }
+      # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
+      # until the button "quantify area" is pressed again.
+      if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
+        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
+                col = "#c7e9c0", border = "darkgreen")
+      }
     }
     if(input$green_lines){
       abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
@@ -820,10 +821,10 @@ server <- function(input, output, session) {
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
       if(isTruthy(val$control_baseline[[input$select_area]][input$select])){
-                    polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                            c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
-                            col = "#c7e9c0", border = "black")
-                }
+        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
+                c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
+                col = "#c7e9c0", border = "black")
+      }
     }
     # selected x-anchor and baseline are displayed if box is ticked
     if(input$red_lines){
