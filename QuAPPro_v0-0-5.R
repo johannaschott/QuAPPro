@@ -106,138 +106,224 @@ ui <- fluidPage(
   tabsetPanel(
     # FIRST TAB
     tabPanel(tags$strong("Analysis profiles"), icon = icon("chart-area"), # updated to newer version
-             fluidRow(column(6, tags$h4(tags$strong("Single profiles for quantification"))),
+             fluidRow(column(2),
+                      column(4, tags$h4(tags$strong("Single profiles for quantification"))),
                       column(6, tags$h4(tags$strong("Multiple aligned profiles")))),
              
              fluidRow(
-               column(2,
-                      # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv")),
-                      
-                      #Let user select their loaded files and set x-anchor and baseline
-                      selectInput("select", "Select files", choices = c(), width = '100%'),
-                      
-                      
-                      
-                      # create inputs for user to set x and y axis limits, should start with initially set values before user input 
-                      fluidRow(tags$h5(tags$strong("Fluorescence")),
-                               
-                               # show fluorescence signal or not?
-                               checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
-                               
-                               column(6,
-                                      numericInput("axis1_fl", "Set y min", value = NULL)),
-                               column(6,
-                                      numericInput("axis2_fl", "Set y max", value = NULL))),
-                      
-                      # introduce a slider for smoothing of the fluorescence signal
-                      fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
-                                           max = 100, value = 0)),
-                      
-                      # set a separate baseline for the fluorescence signal
-                      fluidRow(
-                        column(6,actionButton("baseline_fl", "Set baseline", width = '100%'))),
-                      
-                      fluidRow(tags$h5(tags$strong("Polysome profile")),
-                               column(6,
-                                      numericInput("axis1", "Set y min", value = NULL)),
-                               column(6,
-                                      numericInput("axis2", "Set y max", value = NULL))),
-                      fluidRow(),
-                      fluidRow(
-                        column(6,
-                               numericInput("axis3", "Set x min", value = NULL)),
-                        column(6,
-                               numericInput("axis4", "Set x max", value = NULL))),
-                      
-                      fluidRow(
-                        column(6,actionButton("baseline", "Set baseline", width = '100%')),
-                        column(6,actionButton("x_anchor", "Set x-anchor", width = '100%')) ),
-                      # checkbox determining if lines are displayed in the plot
-                      checkboxInput("red_lines", "Show baseline and x-anchor", value = TRUE, width = NULL)),
-               # display plot area with click option
-               column(4, plotOutput("plot_single", click = "click")),
-               column(4, plotOutput("plot_align")),
-               column(2,
-                      # create inputs for user to set x and y axis limits, should start with initially set values before user input 
-                      fluidRow(tags$h5(tags$strong("Fluorescence")),
-                               
-                               # show fluorescence signal or not?
-                               checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
-                               
-                               column(6,
-                                      numericInput("axis1_a_fl", "Set y min", value = NULL)),
-                               column(6,
-                                      numericInput("axis2_a_fl", "Set y max", value = NULL))),
-                      fluidRow(tags$h5(tags$strong("Polysome profile")),
-                               column(6,
-                                      numericInput("axis1_a", "Set y min", value = NULL)),
-                               column(6,
-                                      numericInput("axis2_a", "Set y max", value = NULL))),
-                      fluidRow(),
-                      fluidRow(
-                        column(6,
-                               numericInput("axis3_a", "Set x min", value = NULL)),
-                        column(6,
-                               numericInput("axis4_a", "Set x max", value = NULL))))),
+                     column(2, style = "padding-left:20px",
+                            # create area for uploading .pks file
+                            fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv")),
+                            
+                            #Let user select their loaded files and set x-anchor and baseline
+                            selectInput("select", "Select files", choices = c(), width = '100%'),
+                            
+                            
+                            
+                            # create inputs for user to set x and y axis limits, should start with initially set values before user input 
+                            fluidRow(tags$h4(tags$strong("Fluorescence profile")),
+                                     
+                                     # show fluorescence signal or not?
+                                     checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
+                                     
+                                     column(6,
+                                            numericInput("axis1_fl", "Set y min", value = NULL)
+                                            ),
+                                     column(6,
+                                            numericInput("axis2_fl", "Set y max", value = NULL))
+                                     ),
+                            
+                            # introduce a slider for smoothing of the fluorescence signal
+                            fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
+                                                 max = 100, value = 0)),
+                            
+                            # set a separate baseline for the fluorescence signal
+                            fluidRow(
+                                    column(6,actionButton("baseline_fl", "Set baseline", width = '100%')
+                                           )
+                                    )
+                            ),
+                     column(4,
+                            plotOutput("plot_single", click = "click")
+                            ),
+                     column(4,
+                            plotOutput("plot_align")
+                            ),
+                     column(2,
+                            # create inputs for user to set x and y axis limits, should start with initially set values before user input 
+                            fluidRow(tags$h5(tags$strong("Fluorescence profile")),
+                                     
+                                     # show fluorescence signal or not?
+                                     checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
+                                     
+                                     column(6,
+                                            numericInput("axis1_a_fl", "Set y min", value = NULL)),
+                                     column(6,
+                                            numericInput("axis2_a_fl", "Set y max", value = NULL))
+                                     ),
+                            fluidRow(tags$h5(tags$strong("Polysome profile")),
+                                     column(6,
+                                            numericInput("axis1_a", "Set y min", value = NULL)),
+                                     column(6,
+                                            numericInput("axis2_a", "Set y max", value = NULL))
+                                     ),
+                            fluidRow(
+                                    column(6,
+                                           numericInput("axis3_a", "Set x min", value = NULL)
+                                           ),
+                                    column(6,
+                                           numericInput("axis4_a", "Set x max", value = NULL)
+                                           )
+                                    )
+                            )
+             ),
              
-             
-             # Create new area directly below the plot
              fluidRow(
-               # Quantification options on the left
-               column(3,
-                      tags$h4(tags$strong("Quantification")),
-                      tags$h6("(Baseline needs to be set)"),
-                      fluidRow(column(6, actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')),
-                               column(6,actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%'))),
-                      selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%'),
-                      actionButton("quantify_area", "Quantify selected area", icon = icon("calculator"), width = '100%'),
-                      checkboxInput("green_lines", "Show area and lines", value = TRUE, width = NULL),
-                      textInput("name_area", "Optional: Name new area", value = "", width = NULL, placeholder = "Unknown peak"),
-                      actionButton("take_over_name", "Add area name to list", icon = icon("check-circle"))
-               ),
-               column(3,
-                      radioButtons("helper_functions", "Use helper functions for setting vertical lines:",
-                                   c("Help find min/max" = "peak_help",
-                                     "Help find inflections" = "inflection_help",
-                                     "No usage of helper functions" = "no_help"
-                                   ), selected = "peak_help")),
-               # Alignment options in the middle
-               column(3,
-                      # let user select files ready to align 
-                      tags$h4(tags$strong("Alignment")),
-                      tags$h6("(Baseline and x-anchor need to be set)"),
-                      selectInput("select_alignment", "Files ready to align", choices = c(), width = '100%'),
-                      # actionButton("align", "Align profiles", icon = icon("align-center"), width = '100%'),
-                      tags$h6("Change order of profiles in alignment plot"),
-                      fluidRow(
-                        column(6, actionButton("up", "up", icon = icon("angle-double-up"), width = '100%')),
-                        column(6, actionButton("down", "down", icon = icon("angle-double-down"), width = '100%'))),
-                      # aligne profiles by pressing the button
-                      #changing their color and linetype seing the changes directly in the plot
+                     column(4,
+                            fluidRow(
+                                    column(6,
+                                           tags$h4(tags$strong("Polysome profile"))
+                                           ),
+                                    column(6,
+                                           tags$h4(tags$strong("Quantification"))
+                                           )
+                                    ),
+                            fluidRow(
+                                    column(6,
+                                           tags$h6("Plot settings:")
+                                           ),
+                                    column(6,
+                                           tags$h6("(Baseline needs to be set)")
+                                           )
+                                    ),
+                            
+                            fluidRow(
+                                     column(3,
+                                            numericInput("axis1", "Set y min", value = NULL)
+                                            ),
+                                     column(3,
+                                            numericInput("axis2", "Set y max", value = NULL)
+                                            ),
+                                     column(3, style = "padding-top:20px",
+                                            actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
+                                            ),
+                                     column(3, style = "padding-top:20px",
+                                            actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
+                                            )
+                                     ),
+                            fluidRow(
+                                    column(3,
+                                           numericInput("axis3", "Set x min", value = NULL)
+                                           ),
+                                    column(3,
+                                           numericInput("axis4", "Set x max", value = NULL)
+                                           ),
+                                    column(3,
+                                           selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%')
+                                           ),
+                                    column(3,
+                                           textInput("name_area", "Optional: Name new area", value = "", width = NULL, placeholder = "Unknown peak")
+                                           )
+                                    ),
+                            
+                            fluidRow(
+                                    column(3,actionButton("baseline", "Set baseline", width = '100%')
+                                           ),
+                                    column(3,actionButton("x_anchor", "Set x-anchor", width = '100%')
+                                           ),
+                                    column(3,
+                                           actionButton("quantify_area", "Quantify selected area", icon = icon("calculator"), width = '100%')
+                                           ),
+                                    column(3,
+                                           actionButton("take_over_name", "Add area name to list", icon = icon("check-circle"))
+                                          )
+                                    ),
+                            fluidRow(
+                                    column(6,
+                                           checkboxInput("red_lines", "Show baseline and x-anchor", value = TRUE, width = NULL)
+                                           ),
+                                    column(6,
+                                           checkboxInput("green_lines", "Show area and lines", value = TRUE, width = NULL)
+                                           )
+                                    )
+                            ),
+                     
+                     column(2,
+                             fluidRow(
+                               downloadButton("downloadSinglePlot", "Download plot", icon = icon("file-download"), width = '100%')
+                               ),
+                             fluidRow(
+                                     radioButtons("helper_functions", "Use helper functions for setting vertical lines:",
+                                                  c("Help find min/max" = "peak_help",
+                                                    "Help find inflections" = "inflection_help",
+                                                    "No usage of helper functions" = "no_help"), selected = "peak_help"),
+                                     style = "padding-top:20px"
+                                      )
+                             ),
                       
-                      
-                      colourInput("color", "Change colors for aligned profiles", palette = "square"),
-                      selectInput("linetype", "Change linetypes for aligned profiles", choices = c("solid", "dashed", "dotted",
-                                                                                                   "dotdash", "longdash", "twodash"), 
-                                  width = '100%', selected = "solid"),
-                      numericInput("linewidth", "Change linewidth for aligned profiles", value = 1),
-                      fluidRow(column(6, actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')),
-                               column(6, actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')))),
-               # Plot display options on the right with plot download button
-               column(3,
-                      #checkboxInput("peak_help", "Help find max/min for setting lines", value = TRUE, width = NULL),
-                      checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
-                      checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      tags$h4(tags$strong("Download plot")),
-                      #shinyDirButton("dir", "Input directory", "Upload"),
-                      #verbatimTextOutput("dir", placeholder = TRUE),
-                      #textInput("filename_user", "Filename", value = "", width = NULL, placeholder = NULL),
-                      downloadButton("downloadPlot", "Download Alignment plot", icon = icon("file-download"), width = '100%'),
-                      downloadButton("downloadSinglePlot", "Download Single plot", icon = icon("file-download"), width = '100%')
-               ))
-    ),
+                      column(2,
+                             # let user select files ready to align 
+                             fluidRow(
+                                      tags$h4(tags$strong("Alignment"))
+                                      ),
+                             fluidRow(
+                                     tags$h6("(Baseline and x-anchor need to be set)")
+                                     ),
+                             
+                             
+                             fluidRow(
+                                      column(8,
+                                             selectInput("select_alignment", "Profiles avaible for alignment", choices = c(), width = '100%')
+                                             ),
+                                      column(1, style = "padding-top:20px",
+                                             actionButton("up", NULL, icon = icon("angle-double-up"), width = '100%')
+                                             ),
+                                      column(1, style = "padding-top:20px",
+                                             actionButton("down", NULL, icon = icon("angle-double-down"), width = '100%')
+                                             ),
+                                      column(2)
+                               
+                             ),
+                            
+                             
+                             
+                             #changing their color and linetype seing the changes directly in the plot
+                             
+                             fluidRow(
+                                     column(4,
+                                            colourInput("color", "Colors", palette = "square")
+                                            ),
+                                     column(4,
+                                            selectInput("linetype", "Line type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), 
+                                                        width = '100%', selected = "solid")
+                                            ),
+                                     column(4,
+                                            numericInput("linewidth", "Line width", value = 1)
+                                            )
+                                     ),
+                             
+
+                             fluidRow(
+                                     column(6, 
+                                            actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
+                                            ),
+                                     column(6, 
+                                            actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
+                                            )
+                                     )
+                      ),
+          
+                      column(2,
+                             downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
+                             checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
+                             checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
+                             checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL)
+                             ),
+               
+                      column(2)
+                      )
+    
+     ),
     # SECOND TAB
     # shows updating table of quantified areas for respective plots, download possible 
     tabPanel(tags$strong("Quantification summary"), icon = icon("list-alt"), 
