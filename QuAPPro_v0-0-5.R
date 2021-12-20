@@ -248,13 +248,19 @@ ui <- fluidPage(
                                     )
                             ),
                      
-                     
-                      column(2,
-                             downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
-                             checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
-                             checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                             checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL)
+                     column(2,
+                             fluidRow(
+                               downloadButton("downloadSinglePlot", "Download plot", icon = icon("file-download"), width = '100%')
+                               ),
+                             fluidRow(
+                                     radioButtons("helper_functions", "Use helper functions for setting vertical lines:",
+                                                  c("Help find min/max" = "peak_help",
+                                                    "Help find inflections" = "inflection_help",
+                                                    "No usage of helper functions" = "no_help"), selected = "peak_help"),
+                                     style = "padding-top:20px"
+                                      )
                              ),
+                      
                       column(2,
                              # let user select files ready to align 
                              fluidRow(
@@ -308,17 +314,12 @@ ui <- fluidPage(
                       ),
           
                       column(2,
-                             fluidRow(
-                               downloadButton("downloadSinglePlot", "Download plot", icon = icon("file-download"), width = '100%')
-                               ),
-                             fluidRow(
-                                     radioButtons("helper_functions", "Use helper functions for setting vertical lines:",
-                                                  c("Help find min/max" = "peak_help",
-                                                    "Help find inflections" = "inflection_help",
-                                                    "No usage of helper functions" = "no_help"), selected = "peak_help"),
-                                     style = "padding-top:20px"
-                                      )
+                             downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
+                             checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
+                             checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
+                             checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL)
                              ),
+               
                       column(2)
                       )
     
