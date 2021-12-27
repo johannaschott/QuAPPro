@@ -1260,6 +1260,12 @@ server <- function(input, output, session) {
          ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
          yaxt = "n"
     )
+    ### Shows two lines at the moment, if normalize length is ticked, the initial anchor line and the normalized anchor line at the same time?
+      if(input$anchor_line == TRUE){
+         abline(v = max(val$anchor[files_to_plot()])/norm_factor_x()[files_to_plot()],col = "red", lty=2)
+      }
+    
+    
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
     
