@@ -1037,7 +1037,8 @@ server <- function(input, output, session) {
   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
-    dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3")
+    dummy <- rainbow(length(files_to_plot()))
+    #dummy <- qualitative_hcl(length(files_to_plot()), palette = "Rainbow")
     names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
