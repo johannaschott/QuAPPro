@@ -302,7 +302,14 @@ ui <- fluidPage(
                                             )
                                      ),
                              
-
+                             fluidRow(
+                        radioButtons("color_palette", "Select default color palette:",
+                                     c("Dark palette" = "dark_palette",
+                                       "Rainbow palette" = "rainbow_palette"
+                                     ), selected = "dark_palette"),
+                        style = "padding-top:20px"
+                      ),
+                             
                              fluidRow(
                                      column(6, 
                                             actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
@@ -1037,8 +1044,12 @@ server <- function(input, output, session) {
   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
-    dummy <- rainbow(length(files_to_plot()))
-    #dummy <- qualitative_hcl(length(files_to_plot()), palette = "Rainbow")
+    if(input$color_palette == "dark_palette"){
+      dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3") 
+    }
+    if(input$color_palette == "rainbow_palette"){
+      dummy <- rainbow(length(files_to_plot())) 
+    }
     names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
