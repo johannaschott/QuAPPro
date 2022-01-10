@@ -1260,6 +1260,14 @@ server <- function(input, output, session) {
          ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
          yaxt = "n"
     )
+    
+    ### Shows anchor (when "Display x-anchor in alignment" is selected)
+    if(input$anchor_line == TRUE){
+      anchor_line <- val$anchor[files_to_plot()[1]] / norm_factor_x()[files_to_plot()[1]] + shifts()[files_to_plot()[1]]
+      abline(v = anchor_line, col = "red", lty=2)
+    }
+    
+    
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
     
