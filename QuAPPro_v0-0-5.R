@@ -302,7 +302,15 @@ ui <- fluidPage(
                                             )
                                      ),
                              
-
+                             fluidRow(
+                        radioButtons("color_palette", "Select default color palette:",
+                                     c("Dark palette" = "dark_palette",
+                                       "Rainbow palette" = "rainbow_palette",
+                                       "Color blind friendly palette" = "color_blind"
+                                     ), selected = "dark_palette"),
+                        style = "padding-top:20px"
+                      ),
+                             
                              fluidRow(
                                      column(6, 
                                             actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
@@ -1037,7 +1045,18 @@ server <- function(input, output, session) {
   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
-    dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3")
+    if(input$color_palette == "dark_palette"){
+      dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3") 
+    }
+    if(input$color_palette == "rainbow_palette"){
+      dummy <- rainbow(length(files_to_plot())) 
+    }
+    if(input$color_palette == "color_blind"){
+      pal <- c("#0", "#ff6db6", "#006ddb", "#920000",
+               "#b66dff", "#4949", "#ffb6db", "#6db6ff", "#924900",
+               "#24ff24", "#9292", "#490092", "#b6dbff", "#db6d00", "#ffff6d")
+      dummy <- rep(pal, ceiling( length( files_to_plot() )/length(pal ) ) )
+    }
     names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
@@ -1261,6 +1280,7 @@ server <- function(input, output, session) {
          yaxt = "n"
     )
     
+
     # store values in df for creating alignment table
     y_aligned <- values_list()[[f]]
     x_aligned <- x
@@ -1269,6 +1289,14 @@ server <- function(input, output, session) {
                           row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
     colnames(df) <- c("Index", as.character(str_remove(f, ".pks|.csv")))
     csv_file_df <- df
+
+    ### Shows anchor (when "Display x-anchor in alignment" is selected)
+    if(input$anchor_line == TRUE){
+      anchor_line <- val$anchor[files_to_plot()[1]] / norm_factor_x()[files_to_plot()[1]] + shifts()[files_to_plot()[1]]
+      abline(v = anchor_line, col = "red", lty=2)
+    }
+    
+
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
