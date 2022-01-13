@@ -1280,12 +1280,23 @@ server <- function(input, output, session) {
          yaxt = "n"
     )
     
+
+    # store values in df for creating alignment table
+    y_aligned <- values_list()[[f]]
+    x_aligned <- x
+    df = list(x_aligned = x_aligned, y_aligned = y_aligned)
+    attributes(df) = list(names = names(df),
+                          row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
+    colnames(df) <- c("Index", as.character(str_remove(f, ".pks|.csv")))
+    csv_file_df <- df
+
     ### Shows anchor (when "Display x-anchor in alignment" is selected)
     if(input$anchor_line == TRUE){
       anchor_line <- val$anchor[files_to_plot()[1]] / norm_factor_x()[files_to_plot()[1]] + shifts()[files_to_plot()[1]]
       abline(v = anchor_line, col = "red", lty=2)
     }
     
+
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
@@ -1293,6 +1304,17 @@ server <- function(input, output, session) {
     for(f in files_to_plot()[-1])
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
+      
+       # create dataframe with x and y values to merge together in each for loop round. Col names are data names.
+      y_aligned <- values_list()[[f]]
+      x_aligned <- x
+      df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
+      attributes(df2) = list(names = names(df2),
+                             row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv"))) # muss auch noch ".csv" removen können
+      csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
+      
+      # plot files in alignment
       points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
              lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
@@ -1300,6 +1322,9 @@ server <- function(input, output, session) {
            lwd = linewidth_vector()[files_to_plot()], col = colors_vector()[files_to_plot()],
            bty = "n"
     )
+    
+    #create reactive dataframe of all plots to have access outside of renderPlot function
+    val$csv_file_df <- csv_file_df
   }
   
   plot_alignedFluo <- function(){
@@ -1321,15 +1346,38 @@ server <- function(input, output, session) {
          ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
          yaxt = "n", xaxt = "n"
     )
+     # store values in df for creating fluo alignment table
+    y_aligned <- values_fluorescence()[[f]]
+    x_aligned <- x
+    df = list(x_aligned = x_aligned, y_aligned = y_aligned)
+    attributes(df) = list(names = names(df),
+                          row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
+    colnames(df) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv")),"_fluo"))
+    csv_file_df_fluo <- df
+    
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
     
     for(f in  files_in_al_fluo[-1])
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
+      
+      # create dataframe with x and y values to merge together in each for loop round. Col names are data names plus "_fluo".
+      y_aligned <- values_fluorescence()[[f]]
+      x_aligned <- x
+      df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
+      attributes(df2) = list(names = names(df2),
+                             row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
+      
+      colnames(df2) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv")),"_fluo"))
+      csv_file_df_fluo <- merge(csv_file_df_fluo, df2, by="Index", all = T)
+      
       points(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f], 
              lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
+    
+     #create reactive dataframe of all plots to have access outside of renderPlot function
+     val$csv_file_df_all <- merge(val$csv_file_df, csv_file_df_fluo, by="Index", all = T)
   }
   
   plot_alignment <- function(){
@@ -1360,8 +1408,24 @@ server <- function(input, output, session) {
       dev.off()
     })  
   
-  
-  
+    # create table output of aligned files with option to download table with given name
+  output$csv_file <- renderTable(
+    if(input$show_fl_al){
+      val$csv_file_df_all
+    }else{
+      val$csv_file_df
+    }
+  )
+  output$downloadData <- downloadHandler(
+    
+    filename = function() {
+      paste(input$filename_user,".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(val$csv_file_df, file, row.names = FALSE)
+    }
+  )
+ 
 }
 
 shinyApp(ui = ui, server = server)
