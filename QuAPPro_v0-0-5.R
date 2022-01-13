@@ -1052,9 +1052,9 @@ server <- function(input, output, session) {
       dummy <- rainbow(length(files_to_plot())) 
     }
     if(input$color_palette == "color_blind"){
-      pal <- c("#0", "#ff6db6", "#006ddb", "#920000",
-               "#b66dff", "#4949", "#ffb6db", "#6db6ff", "#924900",
-               "#24ff24", "#9292", "#490092", "#b6dbff", "#db6d00", "#ffff6d")
+      pal <- c("#000000", "#ff6db6", "#006ddb", "#920000",
+         "#b66dff", "#004949", "#ffb6db", "#6db6ff", "#924900",
+         "#24ff24", "#929200", "#490092", "#b6dbff", "#db6d00", "#ffff6d")
       dummy <- rep(pal, ceiling( length( files_to_plot() )/length(pal ) ) )
     }
     names(dummy) <- sort(files_to_plot())
