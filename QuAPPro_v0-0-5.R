@@ -305,7 +305,8 @@ ui <- fluidPage(
                              fluidRow(
                         radioButtons("color_palette", "Select default color palette:",
                                      c("Dark palette" = "dark_palette",
-                                       "Rainbow palette" = "rainbow_palette"
+                                       "Rainbow palette" = "rainbow_palette",
+                                       "Color blind friendly palette" = "color_blind"
                                      ), selected = "dark_palette"),
                         style = "padding-top:20px"
                       ),
@@ -1049,6 +1050,12 @@ server <- function(input, output, session) {
     }
     if(input$color_palette == "rainbow_palette"){
       dummy <- rainbow(length(files_to_plot())) 
+    }
+    if(input$color_palette == "color_blind"){
+      pal <- c("#0", "#ff6db6", "#006ddb", "#920000",
+               "#b66dff", "#4949", "#ffb6db", "#6db6ff", "#924900",
+               "#24ff24", "#9292", "#490092", "#b6dbff", "#db6d00", "#ffff6d")
+      dummy <- rep(pal, ceiling( length( files_to_plot() )/length(pal ) ) )
     }
     names(dummy) <- sort(files_to_plot())
     if (length(val$colors_collected) > 0){
