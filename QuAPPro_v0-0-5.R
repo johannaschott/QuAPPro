@@ -765,7 +765,8 @@ server <- function(input, output, session) {
   })
   
   # update color, line type and width to the values of the selected profiles
-  observeEvent(input$select_alignment, {
+  observeEvent({input$select_alignment
+               input$color_palette},  {
     req(input$select_alignment)
     updateColourInput(session, "color", value = colors_vector()[[input$select_alignment]])
     updateNumericInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]]  )
@@ -1043,6 +1044,13 @@ server <- function(input, output, session) {
     }
   })
   
+    # if color palette choice gets changed by the user, the original color_vector is reset to an empty list again
+  observeEvent(
+    input$color_palette,              
+    {val$colors_collected = list()}, 
+    ignoreInit = TRUE
+  )
+    
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
     if(input$color_palette == "dark_palette"){
