@@ -350,7 +350,7 @@ ui <- fluidPage(
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
              fluidRow(
                column(2),
-               column(8, includeMarkdown("~relative path")),
+               column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
                column(2))
              ),
     # FIFTH TAB
