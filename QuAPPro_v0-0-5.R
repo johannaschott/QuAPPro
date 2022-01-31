@@ -271,7 +271,7 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(8,
-                               selectInput("select_alignment", "Profiles avaible for alignment", choices = c(), width = '100%')
+                               selectInput("select_alignment", "Profiles available for alignment", choices = c(), width = '100%')
                         ),
                         column(1, style = "padding-top:20px",
                                actionButton("up", NULL, icon = icon("angle-double-up"), width = '100%')
