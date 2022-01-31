@@ -430,6 +430,26 @@ server <- function(input, output, session) {
     file_types = vector()
   )
   
+  val <- reactiveValues(
+    xmin_collected = list()
+  )
+  val <- reactiveValues(
+    xmax_collected = list()
+  )
+  val <- reactiveValues(
+    ymin_collected = list()
+  )
+  val <- reactiveValues(
+    ymax_collected = list()
+  )
+  val <- reactiveValues(
+    ymin_collected_fl = list()
+  )
+  val <- reactiveValues(
+    ymax_collected_fl = list()
+  )
+  
+  
   ### INITIAL LOADED FILES
   # update select output field with the name of every newly loaded file
   observe({
@@ -526,45 +546,46 @@ server <- function(input, output, session) {
   
   # When user selects other axis limits, limit values change (works for both single and aligned (+ normalized) plots)
   ymin_single <- reactive({
-    if(is.na(input$axis1)){
-      0
+    if(isTruthy(val$ymin_collected[[input$select]])){
+      val$ymin_collected[[input$select]]*lost_num_pol()
     }else{
-      input$axis1*lost_num_pol()
+      0
     }})
   
   ymin_single_fl <- reactive({
-    if(is.na(input$axis1_fl)){
-      0
+    if(isTruthy(val$ymin_collected_fl[[input$select]])){
+      val$ymin_collected_fl[[input$select]]*lost_num_fl()
     }else{
-      input$axis1_fl*lost_num_fl()
+      0
     }})
   
   ymax_single <- reactive({
-    if(is.na(input$axis2)){
-      max(yvalue())
+    if(isTruthy(val$ymax_collected[[input$select]])){
+      val$ymax_collected[[input$select]]*lost_num_pol()
     }else{
-      input$axis2*lost_num_pol()
+      max(yvalue())
     }})
   
   ymax_single_fl <- reactive({
-    if(is.na(input$axis2_fl)){
-      max(fluorescence())
+    if(isTruthy(val$ymax_collected_fl[[input$select]])){
+      val$ymax_collected_fl[[input$select]]*lost_num_fl()
     }else{
-      input$axis2_fl*lost_num_fl()
+      max(fluorescence())
     }})
   
   xmin_single <- reactive({
-    if(is.na(input$axis3)){
-      0
+    req(input$select)
+    if(isTruthy(val$xmin_collected[[input$select]])){
+      val$xmin_collected[[input$select]]
     }else{
-      input$axis3
+      0
     }})
   
   xmax_single <- reactive({
-    if(is.na(input$axis4)){
-      max(xvalue())
+    if(isTruthy(val$xmax_collected[[input$select]])){
+      val$xmax_collected[[input$select]]
     }else{
-      input$axis4
+      max(xvalue())
     }})
   
   #### ALIGNMENT:
@@ -725,7 +746,7 @@ server <- function(input, output, session) {
       df_quant <- merge(df_quant, df_quant_new, by = "files", all = T)
     }
     val$df_quant <- df_quant
-
+    
     # store not only area but also start and stop values in the same ways as areas!
     val$area_starts[[input$select_area]][input$select] <- val$file_starts[[input$select]]
     val$area_ends[[input$select_area]][input$select] <- val$file_ends[[input$select]]
@@ -753,6 +774,30 @@ server <- function(input, output, session) {
   observeEvent(input$color, {
     if(input$color != "#FFFFFF"){
       val$colors_collected[[input$select_alignment]] <- input$color}
+  })
+  
+  # save axis limits set by the user for single profiles
+  observeEvent(input$axis3, {
+    val$xmin_collected[[input$select]] <- input$axis3
+  })
+  observeEvent(input$axis4, {
+    val$xmax_collected[[input$select]] <- input$axis4
+  })
+  observeEvent(input$axis1, {
+    val$ymin_collected[[input$select]] <- input$axis1
+  })
+  observeEvent(input$axis2, {
+    val$ymax_collected[[input$select]] <- input$axis2
+  })
+  observeEvent(input$axis1_fl, {
+    if(is.numeric(input$axis1_fl)){
+      val$ymin_collected_fl[[input$select]] <- input$axis1_fl 
+    }
+  })
+  observeEvent(input$axis2_fl, {
+    if(is.numeric(input$axis2_fl)){
+      val$ymax_collected_fl[[input$select]] <- input$axis2_fl
+    }
   })
   
   # Let user change linetypes of the different plots (selected out of aligned files)
@@ -793,6 +838,13 @@ server <- function(input, output, session) {
     }
   })
   
+  observe({
+    updateNumericInput(session, "axis3", value = xmin_single())
+    updateNumericInput(session, "axis4", value = xmax_single())
+    updateNumericInput(session, "axis1", value = ymin_single()/lost_num_pol())
+    updateNumericInput(session, "axis2", value = ymax_single()/lost_num_pol())
+  })
+  
   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
   observeEvent(input$show_fl,{
     if(!("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
@@ -801,6 +853,17 @@ server <- function(input, output, session) {
       updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
+  
+  # let axis limits update for fluorescence axis
+  observe({
+      if(("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
+        updateNumericInput(session, "axis1_fl", value = ymin_single_fl()/lost_num_fl() )
+        updateNumericInput(session, "axis2_fl", value = ymax_single_fl()/lost_num_fl())
+      }else{
+        updateNumericInput(session, "axis1_fl", value = "")
+        updateNumericInput(session, "axis2_fl", value = "")
+      } 
+    })
   
   # show notification if "Show fluorescence" was selected for alignment 
   # but there is not fluorescence signal
@@ -1326,7 +1389,7 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv"))) # muss auch noch ".csv" removen können
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv"))) # muss auch noch ".csv" removen kÃ¶nnen
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
@@ -1446,4 +1509,3 @@ server <- function(input, output, session) {
 shinyApp(ui = ui, server = server)
 
 ###############
-
