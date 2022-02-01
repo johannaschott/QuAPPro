@@ -350,9 +350,9 @@ ui <- fluidPage(
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
              fluidRow(
                column(2),
-               column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
+               column(8, htmltools::includeMarkdown("C:/Users/User/Dokumente/QuAPPro/dev_version/RMD_menu_template_2022.Rmd")),
                column(2))
-             ),
+    ),
     # FIFTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
@@ -865,14 +865,14 @@ server <- function(input, output, session) {
   
   # let axis limits update for fluorescence axis
   observe({
-      if(("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
-        updateNumericInput(session, "axis1_fl", value = ymin_single_fl()/lost_num_fl() )
-        updateNumericInput(session, "axis2_fl", value = ymax_single_fl()/lost_num_fl())
-      }else{
-        updateNumericInput(session, "axis1_fl", value = "")
-        updateNumericInput(session, "axis2_fl", value = "")
-      } 
-    })
+    if(("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
+      updateNumericInput(session, "axis1_fl", value = ymin_single_fl()/lost_num_fl() )
+      updateNumericInput(session, "axis2_fl", value = ymax_single_fl()/lost_num_fl())
+    }else{
+      updateNumericInput(session, "axis1_fl", value = "")
+      updateNumericInput(session, "axis2_fl", value = "")
+    } 
+  })
   
   # show notification if "Show fluorescence" was selected for alignment 
   # but there is not fluorescence signal
@@ -1055,25 +1055,17 @@ server <- function(input, output, session) {
   # Enable download of current plot as pdf
   
   output$downloadSinglePlot <- downloadHandler(
-    filename = function(){ sub(pattern = "(.*?)\\..*$", replacement = "\\1", as.character(input$select) ) },
+    filename = function(){ 
+      paste( 
+        sub(pattern = "(.*?)\\..*$", replacement = "\\1", as.character(input$select) ),
+        ".pdf", sep = ""
+        )
+      },
     content = function(file) {
       pdf(file, width = 10, height = 6 )
       print( plot_singleInput() )
       dev.off()
     })  
-  
-  # create table output of aligned files with option to download the table with given name
-  output$csv_file <- renderTable(
-    val$csv_file_df
-  )
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste(input$filename_user,".csv", sep = "")
-    },
-    content = function(file) {
-      write.csv2(val$csv_file_df, file, row.names = FALSE)
-    }
-  )
   
   # create output table showing quantification data with option to download table with given name
   output$quantification <- renderTable(
@@ -1081,9 +1073,7 @@ server <- function(input, output, session) {
   )
   
   output$downloadQuant <- downloadHandler(
-    filename = function() {
-      paste(input$filen_quant_user,".csv", sep = "")
-    },
+    filename = "quantification.csv",
     content = function(file) {
       write.csv2( val$df_quant, file, row.names = F)
     }
@@ -1488,7 +1478,7 @@ server <- function(input, output, session) {
   # Enable download of current plot as pdf
   
   output$downloadPlot <- downloadHandler(
-    filename = "alignment",
+    filename = "alignment.pdf",
     content = function(file) {
       pdf(file, width = 10, height = 6 )
       print( plot_alignedPol() )
@@ -1504,12 +1494,13 @@ server <- function(input, output, session) {
     }
   )
   output$downloadData <- downloadHandler(
-    
-    filename = function() {
-      paste(input$filename_user,".csv", sep = "")
-    },
+    filename = "alignment.csv",
     content = function(file) {
-      write.csv(val$csv_file_df, file, row.names = FALSE)
+      if(input$show_fl_al){
+        write.csv2(val$csv_file_df_all, file, row.names = FALSE)
+      }else{
+        write.csv2(val$csv_file_df, file, row.names = FALSE)
+      }
     }
   )
   
