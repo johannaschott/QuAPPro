@@ -231,10 +231,10 @@ ui <- fluidPage(
                         column(3,actionButton("x_anchor", "Set x-anchor", width = '100%')
                         ),
                         column(3,
-                               actionButton("quantify_area", "Quantify selected area", icon = icon("calculator"), width = '100%')
+                               actionButton("quantify_area", "Quantify area", icon = icon("calculator"), width = '100%')
                         ),
                         column(3,
-                               actionButton("take_over_name", "Add area name to list", icon = icon("check-circle"))
+                               actionButton("take_over_name", "Add name", icon = icon("check-circle"), width = '100%')
                         )
                       ),
                       fluidRow(
@@ -272,7 +272,7 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(8,
-                               selectInput("select_alignment", "Profiles available for alignment", choices = c(), width = '100%')
+                               selectInput("select_alignment", "Available profiles", choices = c(), width = '100%')
                         ),
                         column(1, style = "padding-top:20px",
                                actionButton("up", NULL, icon = icon("angle-double-up"), width = '100%')
@@ -289,15 +289,15 @@ ui <- fluidPage(
                       #changing their color and linetype seing the changes directly in the plot
                       
                       fluidRow(
-                        column(4,
+                        column(5, 
                                colourInput("color", "Colors", palette = "square")
                         ),
-                        column(4,
-                               selectInput("linetype", "Line type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), 
-                                           width = '100%', selected = "solid")
+                        column(4, style = "padding-left:0px", 
+                               selectInput("linetype", "Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), 
+                                           selected = "solid")
                         ),
-                        column(4,
-                               numericInput("linewidth", "Line width", value = 1)
+                        column(3, style = "padding-left:0px",
+                               numericInput("linewidth", "Width", value = 1)
                         )
                       ),
                       
@@ -350,7 +350,7 @@ ui <- fluidPage(
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
              fluidRow(
                column(2),
-               column(8, htmltools::includeMarkdown("C:/Users/User/Dokumente/QuAPPro/dev_version/RMD_menu_template_2022.Rmd")),
+               column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
                column(2))
     ),
     # FIFTH TAB
@@ -374,6 +374,7 @@ ui <- fluidPage(
              tags$h4(tags$a(href="https://www.umm.uni-heidelberg.de/impressum/", "Impressum", style = "color:blue") )
     )
   ))
+
 
 
 #### SERVER ####
@@ -1059,8 +1060,8 @@ server <- function(input, output, session) {
       paste( 
         sub(pattern = "(.*?)\\..*$", replacement = "\\1", as.character(input$select) ),
         ".pdf", sep = ""
-        )
-      },
+      )
+    },
     content = function(file) {
       pdf(file, width = 10, height = 6 )
       print( plot_singleInput() )
@@ -1505,7 +1506,5 @@ server <- function(input, output, session) {
   )
   
 }
-
-shinyApp(ui = ui, server = server)
 
 ###############
