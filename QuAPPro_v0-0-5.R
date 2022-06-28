@@ -463,10 +463,18 @@ server <- function(input, output, session) {
   ### INITIAL LOADED FILES
   # update select output field with the name of every newly loaded file
   observe({
-    session$userData$files_list <- c(input$input_data$name, session$userData$files_list)
+    session$userData$files_list <- c(input$input_data$name[input$input_data$size != 0], session$userData$files_list)
     updateSelectInput(session, "select",
                       choices = session$userData$files_list)
   })
+  
+  # notification if empty file is loaded
+  observeEvent(input$input_data,{
+    if(length(input$input_data$name[input$input_data$size != 0]) != length(input$input_data$name)){
+      showNotification(paste("One loaded file is empty and will be ignored."),
+                      duration = NULL, type = "message")}
+ })
+  
   observe({
     req(input$select)
     
