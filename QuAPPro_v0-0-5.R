@@ -112,7 +112,7 @@ ui <- fluidPage(
              fluidRow(
                column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv")),
+                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -471,9 +471,14 @@ server <- function(input, output, session) {
   # notification if empty file is loaded
   observeEvent(input$input_data,{
     if(length(input$input_data$name[input$input_data$size != 0]) != length(input$input_data$name)){
-      showNotification(paste("One loaded file is empty and will be ignored."),
-                      duration = NULL, type = "message")}
- })
+      if((length(input$input_data$name) - length(input$input_data$name[input$input_data$size != 0])) == 1)
+      {showNotification(paste0("File ",input$input_data$name[input$input_data$size == 0]," is empty and will be ignored."),
+                        duration = NULL, type = "message")
+      }else if((length(input$input_data$name) - length(input$input_data$name[input$input_data$size != 0])) > 1){
+        showNotification(paste0("Files ",paste(input$input_data$name[input$input_data$size == 0], collapse = ", ")," are empty and will be ignored."),
+                         duration = NULL, type = "message")}
+    }
+  })
   
   observe({
     req(input$select)
@@ -488,6 +493,9 @@ server <- function(input, output, session) {
       val$factors_list[[input$select]] <- (0.2/60)
       val$file_types[input$select] <- "csv" 
       print(val$factors_list[[input$select]])
+    }else if((grepl(".txt",as.character(input$select)) == T)){
+      val$factors_list[[input$select]] <- (0.1/60)
+      val$file_types[input$select] <- "pks"
     }
   })
   # when an input file is selected store the path to the selected file name as current_path
@@ -505,7 +513,8 @@ server <- function(input, output, session) {
     }else if(grepl(".csv",as.character(input$select)) == T){
       start <- grep("Data Columns:", readLines(current_path()))
       read.csv(current_path(), skip = start)
-    }
+    }else if(grepl(".txt",as.character(input$select)) == T){
+      read.delim(current_path())}
   })
   
   # Setting y and x column values for plotting from the loaded dataset
@@ -516,6 +525,8 @@ server <- function(input, output, session) {
       file_plot()[ ,3]}else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
         file_plot()[ ,5]}else if((grepl(".csv",as.character(input$select)) == T) & (ncol(file_plot()) == 4)){
           head(file_plot()[,2], -1)
+        }else if((grepl(".txt",as.character(input$select)) == T)){
+          file_plot()[ ,2]
         }
   })
   
@@ -534,8 +545,9 @@ server <- function(input, output, session) {
         (1:length((file_plot()[ ,4])))*val$factors_list[[input$select]]
       }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
         (head(1:length(file_plot()[,1]),-1))*val$factors_list[[input$select]]
+      }else if((grepl(".txt",as.character(input$select)) == T)){
+        (file_plot()[ ,1]+1)*val$factors_list[[input$select]]
       }
-    
     
   })
   
@@ -1221,7 +1233,7 @@ server <- function(input, output, session) {
     dummy <- list()
     for(f in files_to_plot())
     {
-      if(val$factors_list[[f]] == (0.1/60)){
+      if(val$factors_list[[f]] == (0.1/60) & grepl(".pks",as.character(f))){
         next_y <- read.table(val$paths_collected[f], dec = ",", header = F)$V3
       }else if(val$factors_list[[f]] == (4.8/15)/60){
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
@@ -1229,6 +1241,8 @@ server <- function(input, output, session) {
       }else if(val$factors_list[[f]] == (0.2)/60){
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         next_y <- head(read.csv(val$paths_collected[f], skip = start)$Absorbance, -1)
+      }else if(val$factors_list[[f]] == (0.1/60) & grepl(".txt",as.character(f))){
+        next_y <- read.delim(val$paths_collected[f])[,2]
       }
       
       dummy[[f]] <- ( ( next_y - val$baseline[f])/norm_factor()[f])*norm_factor_x()[f]
@@ -1373,7 +1387,7 @@ server <- function(input, output, session) {
     df = list(x_aligned = x_aligned, y_aligned = y_aligned)
     attributes(df) = list(names = names(df),
                           row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-    colnames(df) <- c("Index", as.character(str_remove(f, ".pks|.csv")))
+    colnames(df) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt")))
     csv_file_df <- df
     
     ### Shows anchor (when "Display x-anchor in alignment" is selected)
@@ -1397,7 +1411,7 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv"))) # muss auch noch ".csv" removen kÃ¶nnen
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃ¶nnen
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
@@ -1438,7 +1452,7 @@ server <- function(input, output, session) {
     df = list(x_aligned = x_aligned, y_aligned = y_aligned)
     attributes(df) = list(names = names(df),
                           row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-    colnames(df) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv")),"_fluo"))
+    colnames(df) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv|.txt")),"_fluo"))
     csv_file_df_fluo <- df
     
     a <- axTicks(2)
@@ -1455,7 +1469,7 @@ server <- function(input, output, session) {
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
       
-      colnames(df2) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv")),"_fluo"))
+      colnames(df2) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv|.txt")),"_fluo"))
       csv_file_df_fluo <- merge(csv_file_df_fluo, df2, by="Index", all = T)
       
       points(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f], 
