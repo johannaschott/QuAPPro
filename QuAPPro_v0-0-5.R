@@ -80,6 +80,7 @@ smooth_profile <- function(y, half_window)
 
 
 ### USER INTERFACE ###
+
 ui <- fluidPage(
   # add title for webpage tab
   tags$head(tags$title("QuAPPro at MI3")),
@@ -98,8 +99,8 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-    )
-  ),
+      )
+      ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
@@ -109,9 +110,9 @@ ui <- fluidPage(
                       column(6, tags$h4(tags$strong("Multiple aligned profiles")))),
              
              fluidRow(
-               column(2, style = "padding-left:10px",
+               column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks, txt or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
+                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -119,35 +120,27 @@ ui <- fluidPage(
                       
                       
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
-                      column(1),
-                      column(11,
-                      fluidRow( tags$h4(tags$strong("Fluorescence profile")))),
-                      fluidRow(         
+                      fluidRow(tags$h4(tags$strong("Fluorescence profile")),
+                               
                                # show fluorescence signal or not?
-                               # set a separate baseline for the fluorescence signal
+                               checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
                                
-                              column(6, style = "padding-top:10px",actionButton("baseline_fl", "Set fluo_baseline", width = '90%')
-                                 ),
-                               
-                              column(6,checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL)),
-                               
-                           
-                      ),
-                      
-                      fluidRow(
-                      column(6,
+                               column(6,
                                       numericInput("axis1_fl", "Set y min", value = NULL)
+                               ),
+                               column(6,
+                                      numericInput("axis2_fl", "Set y max", value = NULL))
                       ),
-                      column(6,
-                             numericInput("axis2_fl", "Set y max", value = NULL))),
                       
                       # introduce a slider for smoothing of the fluorescence signal
-                      column(1),
-                      column(11,
                       fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
-                                           max = 100, value = 0))),
+                                           max = 100, value = 0)),
                       
-                         
+                      # set a separate baseline for the fluorescence signal
+                      fluidRow(
+                        column(6,actionButton("baseline_fl", "Set baseline", width = '100%')
+                        )
+                      )
                ),
                column(4,
                       plotOutput("plot_single", click = "click")
@@ -194,21 +187,15 @@ ui <- fluidPage(
                                tags$h4(tags$strong("Quantification"))
                         )
                       ),
-                      
                       fluidRow(
-                        
-                        column(3,style = "padding-top:10px", actionButton("baseline", "Set baseline", width = '100%')
+                        column(6,
+                               tags$h6("Plot settings:")
                         ),
-                        column(3,style = "padding-top:10px", actionButton("x_anchor", "Set x-anchor", width = '100%')
-                        ),
-                        
-                        column(3, style = "padding-top:10px",
-                               actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
-                        ),
-                        column(3, style = "padding-top:10px",
-                               actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
+                        column(6,
+                               tags$h6("(Baseline needs to be set)")
                         )
                       ),
+                      
                       fluidRow(
                         column(3,
                                numericInput("axis1", "Set y min", value = NULL)
@@ -216,15 +203,13 @@ ui <- fluidPage(
                         column(3,
                                numericInput("axis2", "Set y max", value = NULL)
                         ),
-                        
-                        column(3,
-                               selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%')
+                        column(3, style = "padding-top:20px",
+                               actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
                         ),
-                        column(3,
-                               textInput("name_area", "Optional: Name area", value = "", width = NULL, placeholder = "Unknown peak")
+                        column(3, style = "padding-top:20px",
+                               actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
                         )
                       ),
-                      
                       fluidRow(
                         column(3,
                                numericInput("axis3", "Set x min", value = NULL)
@@ -232,10 +217,23 @@ ui <- fluidPage(
                         column(3,
                                numericInput("axis4", "Set x max", value = NULL)
                         ),
-                        column(3, style = "padding-top:22px",
+                        column(3,
+                               selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%')
+                        ),
+                        column(3,
+                               textInput("name_area", "Optional: Name new area", value = "", width = NULL, placeholder = "Unknown peak")
+                        )
+                      ),
+                      
+                      fluidRow(
+                        column(3,actionButton("baseline", "Set baseline", width = '100%')
+                        ),
+                        column(3,actionButton("x_anchor", "Set x-anchor", width = '100%')
+                        ),
+                        column(3,
                                actionButton("quantify_area", "Quantify area", icon = icon("calculator"), width = '100%')
                         ),
-                        column(3, style = "padding-top:22px",
+                        column(3,
                                actionButton("take_over_name", "Add name", icon = icon("check-circle"), width = '100%')
                         )
                       ),
@@ -286,35 +284,9 @@ ui <- fluidPage(
                         
                       ),
                       
-                      fluidRow(
-                        column(6, 
-                               actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
-                        ),
-                        column(6, 
-                               actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
-                        )
-                      )
                       
                       
-                      
-                     
-               ),
-               
-               column(2, #changing their color and linetype seing the changes directly in the plot
-                      
-                      
-                      fluidRow(
-                        radioButtons("color_palette", "Select default color palette:",
-                                     c("Dark palette" = "dark_palette",
-                                       "Rainbow palette" = "rainbow_palette",
-                                       "Color blind friendly palette" = "color_blind"
-                                     ), selected = "dark_palette"),
-                        style = "padding-top:20px"
-                      ),
-                      
-                      fluidRow(
-                        tags$h6("Adjust selected profile yourself:")
-                      ),
+                      #changing their color and linetype seing the changes directly in the plot
                       
                       fluidRow(
                         column(5, 
@@ -327,15 +299,35 @@ ui <- fluidPage(
                         column(3, style = "padding-left:0px",
                                numericInput("linewidth", "Width", value = 1)
                         )
-                      )
+                      ),
                       
+                      fluidRow(
+                        radioButtons("color_palette", "Select default color palette:",
+                                     c("Dark palette" = "dark_palette",
+                                       "Rainbow palette" = "rainbow_palette",
+                                       "Color blind friendly palette" = "color_blind"
+                                     ), selected = "dark_palette"),
+                        style = "padding-top:20px"
+                      ),
+                      
+                      fluidRow(
+                        column(6, 
+                               actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
+                        ),
+                        column(6, 
+                               actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
+                        )
+                      )
                ),
                
                column(2,
                       downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
                       checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
                       checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL))
+                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL)
+               ),
+               
+               column(2)
              )
              
     ),
@@ -355,12 +347,12 @@ ui <- fluidPage(
              tableOutput("csv_file")),
     # FOURTH TAB 
     # shows Rmd manual  
-    tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
-             fluidRow(
-               column(2),
-               column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
-               column(2))
-    ),
+    #tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
+    #         fluidRow(
+    #           column(2),
+    #           column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
+    #           column(2))
+    #),
     # FIFTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
@@ -382,6 +374,7 @@ ui <- fluidPage(
              tags$h4(tags$a(href="https://www.umm.uni-heidelberg.de/impressum/", "Impressum", style = "color:blue") )
     )
   ))
+
 
 
 #### SERVER ####
@@ -982,17 +975,17 @@ server <- function(input, output, session) {
   ## plot individual profiles
   plot_singleFl <-function(){
     if(lost_num_fl() == 1 ){
-      ylab <- "Fluorescence"
+      ylab <- "Fluo."
     }else{
-      ylab <- paste("Fluoresc. (x ", lost_num_fl(), ")", sep = "")
+      ylab <- paste("Fluo. (x ", lost_num_fl(), ")", sep = "")
     }
     
     par(mar = c(0, 4, 0.5, 2)) 
     plot(xvalue(), fluorescence(), type = "l", xaxt = "n", col = "darkgreen", 
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-         las = 1, ylab = ylab, mgp = c(2, 0.6, 0), xlab = "", yaxt = "n")
+         las = 1, ylab = ylab, mgp = c(2.2, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.2)
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(2, 0.6, 0))
+    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1025,13 +1018,17 @@ server <- function(input, output, session) {
     
     par(mar = c(4, 4, 0, 2))
     plot(xvalue(), yvalue(), type = "l", las = 1,
-         ylab = ylab, xlab = "time (min)",
+         ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_single(),ymax_single()), 
-         xlim =c(xmin_single(),xmax_single()), mgp = c(2, 0.6, 0),
-         yaxt = "n"
+         xlim =c(xmin_single(),xmax_single()), mgp = c(2.2, 0.8, 0),
+         yaxt = "n", xaxt = "n", cex.lab = 1.2
     )
+    
+    
+    axis(1, las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
+    
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(2, 0.6, 0))
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1300,6 +1297,22 @@ server <- function(input, output, session) {
     max(profile_heights )
   })
   
+  xmin_all <- reactive({
+    min(aligned_starts())
+  })
+  
+  # find maximum of y-axis values for polysome profiles
+  ymin_all <- reactive({
+    profile_mins <- sapply(values_list()[files_to_plot()], FUN = min)
+    min(profile_mins )
+  })
+  
+  # find maximum of y-axis values for fluorescence profiles
+  ymin_all_fl <- reactive({
+    profile_mins <- sapply(values_fluorescence()[files_to_plot()], FUN = min)
+    min(profile_mins )
+  })
+  
   # axis labels are modified if there are more than three numerals
   lost_num_al_fl <- reactive({
     max_numeral <- max( floor(log10(abs( unlist(values_fluorescence()[intersect( files_to_plot(), names(val$baseline_fl) ) ] ) ))) + 1 ) # how many numerals has the maximum UV absorption?
@@ -1321,11 +1334,21 @@ server <- function(input, output, session) {
     }
   })
   
+  lost_num_al_Index <- reactive({
+    max_numeral <- max( floor(log10(abs( aligned_ends() ))) + 1 ) # how many numerals has the maximum Index?
+    
+    if(max_numeral > 2 ){
+      10^(max_numeral - 2)
+    }else{
+      1
+    }
+  })
+  
   # When user selects other axis limits, limit values change 
   # (works for both single and aligned (+ normalized) plots)
   ymin <- reactive({
     if(is.na(input$axis1_a)){
-      0
+      ymin_all()
     }else{
       input$axis1_a
     }})
@@ -1339,9 +1362,9 @@ server <- function(input, output, session) {
   
   ymin_fl <- reactive({
     if(is.na(input$axis1_a_fl)){
-      0
+      ymin_all_fl()
     }else{
-      input$axis1_a_fl
+      input$axis1_a_fl*lost_num_al_fl()
     }})
   
   ymax_fl <- reactive({
@@ -1353,19 +1376,43 @@ server <- function(input, output, session) {
   
   xmin <- reactive({
     if(is.na(input$axis3_a)){
-      0
+      xmin_all()
     }else{
-      input$axis3_a
+      input$axis3_a*lost_num_al_Index()
     }})
   
   xmax <- reactive({
     if(is.na(input$axis4_a)){
       xmax_all()   
     }else{
-      input$axis4_a
+      input$axis4_a*lost_num_al_Index()
     }
   })    
   
+  
+  observe({
+    req(val$files_to_align)
+    updateNumericInput(session, "axis3_a", value = xmin() /lost_num_al_Index() )
+    updateNumericInput(session, "axis4_a", value = xmax() /lost_num_al_Index() )
+    updateNumericInput(session, "axis1_a", value = ymin()/lost_num_al_pol())
+    updateNumericInput(session, "axis2_a", value = ymax()/lost_num_al_pol())
+  })
+  
+  # let axis limits update for fluorescence axis
+  observe({
+    req(val$files_to_align)
+    req(val$baseline_fl)
+    if(input$show_fl_al)
+    {
+      updateNumericInput(session, "axis1_a_fl", value = ymin_fl() /lost_num_al_fl() )
+      updateNumericInput(session, "axis2_a_fl", value = ymax_fl() /lost_num_al_fl() )
+    }else{
+      updateNumericInput(session, "axis1_fl", value = "")
+      updateNumericInput(session, "axis2_fl", value = "")
+  } 
+})
+  
+ 
   
   #### plotting function for aligned profiles
   
@@ -1381,10 +1428,10 @@ server <- function(input, output, session) {
     par(mar = c(4, 4, 0, 2)) 
     plot(x, values_list()[[f]], type = "l", lty = lines_vector()[f],
          lwd = linewidth_vector()[f],
-         ylab = ylab, xlab = "Index", las = 1,
-         col = colors_vector()[f], mgp = c(2, 0.6, 0), 
+         ylab = ylab, xlab = "Relative position", las = 1,
+         col = colors_vector()[f], mgp = c(2.2, 1, 0), 
          ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
-         yaxt = "n"
+         yaxt = "n", xaxt = "n", cex.lab = 1.2
     )
     
     
@@ -1403,10 +1450,11 @@ server <- function(input, output, session) {
       abline(v = anchor_line, col = "red", lty=2)
     }
     
-    
+    a <- axTicks(1)
+    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2, 0.6, 0))
+    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
     
     for(f in files_to_plot()[-1])
     {
@@ -1418,7 +1466,7 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃ¶nnen
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂ¶nnen
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
@@ -1437,7 +1485,7 @@ server <- function(input, output, session) {
   plot_alignedFluo <- function(){
     
     if(lost_num_al_fl() == 1 ){
-      ylab <- "Fluorescence"
+      ylab <- "Fluo."
     }else{
       ylab <- paste("Fluo. (x ", lost_num_al_fl(), ")", sep = "")
     }
@@ -1449,9 +1497,9 @@ server <- function(input, output, session) {
     plot(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f],
          lwd = linewidth_vector()[f],
          ylab = ylab, xlab = "", las = 1,
-         col = colors_vector()[f], mgp = c(2, 0.6, 0), 
+         col = colors_vector()[f], mgp = c(2.2, 0.8, 0), 
          ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
-         yaxt = "n", xaxt = "n"
+         yaxt = "n", xaxt = "n", cex.lab = 1.2
     )
     # store values in df for creating fluo alignment table
     y_aligned <- values_fluorescence()[[f]]
@@ -1463,7 +1511,7 @@ server <- function(input, output, session) {
     csv_file_df_fluo <- df
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2, 0.6, 0))
+    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(2.2, 0.8, 0), cex.axis = 1.2)
     
     for(f in  files_in_al_fluo[-1])
     {
@@ -1537,3 +1585,4 @@ server <- function(input, output, session) {
 }
 
 ###############
+shinyApp(ui = ui, server = server)
