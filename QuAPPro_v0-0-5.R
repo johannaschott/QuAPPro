@@ -1359,7 +1359,7 @@ server <- function(input, output, session) {
     if(is.na(input$axis1_a)){
       ymin_all()
     }else{
-      input$axis1_a
+      input$axis1_a*lost_num_al_pol()
     }})
   
   ymax <- reactive({
