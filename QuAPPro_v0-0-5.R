@@ -502,9 +502,12 @@ server <- function(input, output, session) {
       val$factors_list[[input$select]] <- (0.2/60)
       val$file_types[input$select] <- "csv" 
       print(val$factors_list[[input$select]])
-    }else if((grepl(".txt",as.character(input$select)) == T)){
+    }else if((grepl(".txt",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
       val$factors_list[[input$select]] <- (0.1/60)
       val$file_types[input$select] <- "pks"
+    }else if((grepl(".txt",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
+      val$factors_list[[input$select]] <- (0.1/60)
+      val$file_types[input$select] <- "csv_fluo"
     }
   })
   # when an input file is selected store the path to the selected file name as current_path
@@ -542,7 +545,7 @@ server <- function(input, output, session) {
   fluorescence <- reactive({
     req(input$select) 
     req(input$show_fl)
-    if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
+    if(("SampleFluor" %in% colnames(file_plot()))){
       smooth_profile( file_plot()[ ,3], input$slider1 )}
     
   })
@@ -1230,9 +1233,12 @@ server <- function(input, output, session) {
     {
       dummy <- list()
       for(f in names(val$baseline_fl)) # only go through fluorescence signals with baseline
-      {
+      { if(grepl(".csv", val$paths_collected[f]) == T){
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
+        }else{
+          fluo <- read.delim(val$paths_collected[f])$SampleFluor
+        }
         dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
       }
       dummy
