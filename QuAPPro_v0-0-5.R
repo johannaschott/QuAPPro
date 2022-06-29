@@ -99,8 +99,8 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-    )
-  ),
+      )
+      ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
@@ -122,33 +122,33 @@ ui <- fluidPage(
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
                       column(1),
                       column(11,
-                      fluidRow( tags$h4(tags$strong("Fluorescence profile")))),
+                             fluidRow( tags$h4(tags$strong("Fluorescence profile")))),
                       fluidRow(         
-                               # show fluorescence signal or not?
-                               # set a separate baseline for the fluorescence signal
-                               
-                              column(6, style = "padding-top:10px",actionButton("baseline_fl", "Set fluo_baseline", width = '90%')
-                                 ),
-                               
-                              column(6,checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL)),
-                               
-                           
+                        # show fluorescence signal or not?
+                        # set a separate baseline for the fluorescence signal
+                        
+                        column(6, style = "padding-top:10px",actionButton("baseline_fl", "Set fluo_baseline", width = '90%')
+                        ),
+                        
+                        column(6,checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL))
+                        
+                        
                       ),
                       
                       fluidRow(
-                      column(6,
-                                      numericInput("axis1_fl", "Set y min", value = NULL)
-                      ),
-                      column(6,
-                             numericInput("axis2_fl", "Set y max", value = NULL))),
+                        column(6,
+                               numericInput("axis1_fl", "Set y min", value = NULL)
+                        ),
+                        column(6,
+                               numericInput("axis2_fl", "Set y max", value = NULL))),
                       
                       # introduce a slider for smoothing of the fluorescence signal
                       column(1),
                       column(11,
-                      fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
-                                           max = 100, value = 0))),
+                             fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
+                                                  max = 100, value = 0)))
                       
-                         
+                      
                ),
                column(4,
                       plotOutput("plot_single", click = "click")
@@ -298,7 +298,7 @@ ui <- fluidPage(
                       
                       
                       
-                     
+                      
                ),
                
                column(2, #changing their color and linetype seing the changes directly in the plot
@@ -356,13 +356,24 @@ ui <- fluidPage(
              tableOutput("csv_file")),
     # FOURTH TAB 
     # shows Rmd manual  
-    #tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
-   #          fluidRow(
-   #            column(2),
-   #            column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
-    #           column(2))
-  #  ),
+    tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
+             fluidRow(
+               column(2),
+               column(8, htmltools::includeMarkdown("RMD_menu_template_2022.Rmd")),
+               column(2))
+    ),
+    
     # FIFTH TAB
+    # general information and impressum
+    tabPanel(tags$strong("Release notes", style = "color:blue"), icon = icon("info", style = "color:blue"), 
+             tags$h4("Release notes"),
+             tags$div("The current version QuAPPro v0.1.0 can be downlaoded",
+                      downloadLink("DownloadQuAPPro", label = "here"),
+                      "to run it locally."
+             )
+    ),
+    
+    # SIXTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
              tags$h4("About Us"),
@@ -392,6 +403,17 @@ server <- function(input, output, session) {
   
   ### REACTIVE VALUES FOR LISTS BUILT ALONG THE SESSION
   # create reactive values for collecting values in a list/vector/data.frame
+  
+  # 
+  output$DownloadQuAPPro <- downloadHandler(
+    filename = function() {
+      paste("QuAPPro_v0-1-0", ".zip")
+    },
+    content = function(file) {
+      file.copy("QuAPPro_v0-1-0.zip", file)
+    }
+  )
+  
   
   val <- reactiveValues(
     paths_collected = vector()
@@ -502,12 +524,9 @@ server <- function(input, output, session) {
       val$factors_list[[input$select]] <- (0.2/60)
       val$file_types[input$select] <- "csv" 
       print(val$factors_list[[input$select]])
-    }else if((grepl(".txt",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
+    }else if((grepl(".txt",as.character(input$select)) == T)){
       val$factors_list[[input$select]] <- (0.1/60)
       val$file_types[input$select] <- "pks"
-    }else if((grepl(".txt",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-      val$factors_list[[input$select]] <- (0.1/60)
-      val$file_types[input$select] <- "csv_fluo"
     }
   })
   # when an input file is selected store the path to the selected file name as current_path
@@ -545,7 +564,7 @@ server <- function(input, output, session) {
   fluorescence <- reactive({
     req(input$select) 
     req(input$show_fl)
-    if(("SampleFluor" %in% colnames(file_plot()))){
+    if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
       smooth_profile( file_plot()[ ,3], input$slider1 )}
     
   })
@@ -586,7 +605,7 @@ server <- function(input, output, session) {
     }
   })
   
-  # When user selects other axis limits, limit values change (works for both single and aligned (+ normalized) plots)
+  # When user selects other axis limits, limit values change 
   ymin_single <- reactive({
     if(isTruthy(val$ymin_collected[[input$select]])){
       val$ymin_collected[[input$select]]*lost_num_pol()
@@ -1233,12 +1252,9 @@ server <- function(input, output, session) {
     {
       dummy <- list()
       for(f in names(val$baseline_fl)) # only go through fluorescence signals with baseline
-      { if(grepl(".csv", val$paths_collected[f]) == T){
+      {
         start <- grep("Data Columns:", readLines(val$paths_collected[f]))
         fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
-        }else{
-          fluo <- read.delim(val$paths_collected[f])$SampleFluor
-        }
         dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
       }
       dummy
@@ -1361,73 +1377,52 @@ server <- function(input, output, session) {
   
   # When user selects other axis limits, limit values change 
   # (works for both single and aligned (+ normalized) plots)
+  
   ymin <- reactive({
-    if(is.na(input$axis1_a)){
-      ymin_all()
-    }else{
       input$axis1_a*lost_num_al_pol()
-    }})
+  })
   
   ymax <- reactive({
-    if(is.na(input$axis2_a)){
-      ymax_all()  
-    }else{
       input$axis2_a*lost_num_al_pol()
-    }})
+  })
   
   ymin_fl <- reactive({
-    if(is.na(input$axis1_a_fl)){
-      ymin_all_fl()
-    }else{
       input$axis1_a_fl*lost_num_al_fl()
-    }})
+  })
   
   ymax_fl <- reactive({
-    if(is.na(input$axis2_a_fl)){
-      ymax_all_fl()  
-    }else{
       input$axis2_a_fl*lost_num_al_fl()
-    }})
+  })
   
   xmin <- reactive({
-    if(is.na(input$axis3_a)){
-      xmin_all()
-    }else{
       input$axis3_a*lost_num_al_Index()
-    }})
+  })
   
   xmax <- reactive({
-    if(is.na(input$axis4_a)){
-      xmax_all()   
-    }else{
       input$axis4_a*lost_num_al_Index()
-    }
-  })    
+  }) 
+  
+  
   
   
   observe({
     req(val$files_to_align)
-    updateNumericInput(session, "axis3_a", value = xmin() /lost_num_al_Index() )
-    updateNumericInput(session, "axis4_a", value = xmax() /lost_num_al_Index() )
-    updateNumericInput(session, "axis1_a", value = ymin()/lost_num_al_pol())
-    updateNumericInput(session, "axis2_a", value = ymax()/lost_num_al_pol())
+    updateNumericInput(session, "axis3_a", value = xmin_all() /lost_num_al_Index() )
+    updateNumericInput(session, "axis4_a", value = xmax_all() /lost_num_al_Index() )
+    updateNumericInput(session, "axis1_a", value = ymin_all()/lost_num_al_pol())
+    updateNumericInput(session, "axis2_a", value = ymax_all()/lost_num_al_pol())
   })
   
   # let axis limits update for fluorescence axis
   observe({
     req(val$files_to_align)
     req(val$baseline_fl)
-    if(input$show_fl_al)
-    {
-      updateNumericInput(session, "axis1_a_fl", value = ymin_fl() /lost_num_al_fl() )
-      updateNumericInput(session, "axis2_a_fl", value = ymax_fl() /lost_num_al_fl() )
-    }else{
-      updateNumericInput(session, "axis1_fl", value = "")
-      updateNumericInput(session, "axis2_fl", value = "")
-  } 
-})
+    req(input$show_fl_al)
+    updateNumericInput(session, "axis1_a_fl", value = ymin_all_fl() /lost_num_al_fl() )
+    updateNumericInput(session, "axis2_a_fl", value = ymax_all_fl() /lost_num_al_fl() )
+  })
   
- 
+  
   
   #### plotting function for aligned profiles
   
@@ -1481,7 +1476,7 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂ¶nnen
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂÃÂ¶nnen
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
