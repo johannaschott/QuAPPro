@@ -99,8 +99,8 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-      )
-      ),
+    )
+  ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
@@ -110,9 +110,9 @@ ui <- fluidPage(
                       column(6, tags$h4(tags$strong("Multiple aligned profiles")))),
              
              fluidRow(
-               column(2, style = "padding-left:20px",
+               column(2, style = "padding-left:10px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
+                      fileInput("input_data", "Upload pks, txt or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -120,27 +120,35 @@ ui <- fluidPage(
                       
                       
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
-                      fluidRow(tags$h4(tags$strong("Fluorescence profile")),
-                               
+                      column(1),
+                      column(11,
+                      fluidRow( tags$h4(tags$strong("Fluorescence profile")))),
+                      fluidRow(         
                                # show fluorescence signal or not?
-                               checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL),
+                               # set a separate baseline for the fluorescence signal
                                
-                               column(6,
-                                      numericInput("axis1_fl", "Set y min", value = NULL)
-                               ),
-                               column(6,
-                                      numericInput("axis2_fl", "Set y max", value = NULL))
+                              column(6, style = "padding-top:10px",actionButton("baseline_fl", "Set fluo_baseline", width = '90%')
+                                 ),
+                               
+                              column(6,checkboxInput("show_fl", "Show fluorescence signal", value = FALSE, width = NULL)),
+                               
+                           
                       ),
                       
-                      # introduce a slider for smoothing of the fluorescence signal
-                      fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
-                                           max = 100, value = 0)),
-                      
-                      # set a separate baseline for the fluorescence signal
                       fluidRow(
-                        column(6,actionButton("baseline_fl", "Set baseline", width = '100%')
-                        )
-                      )
+                      column(6,
+                                      numericInput("axis1_fl", "Set y min", value = NULL)
+                      ),
+                      column(6,
+                             numericInput("axis2_fl", "Set y max", value = NULL))),
+                      
+                      # introduce a slider for smoothing of the fluorescence signal
+                      column(1),
+                      column(11,
+                      fluidRow(sliderInput("slider1", label = "Smooth profile", min = 0, 
+                                           max = 100, value = 0))),
+                      
+                         
                ),
                column(4,
                       plotOutput("plot_single", click = "click")
@@ -187,15 +195,21 @@ ui <- fluidPage(
                                tags$h4(tags$strong("Quantification"))
                         )
                       ),
+                      
                       fluidRow(
-                        column(6,
-                               tags$h6("Plot settings:")
+                        
+                        column(3,style = "padding-top:10px", actionButton("baseline", "Set baseline", width = '100%')
                         ),
-                        column(6,
-                               tags$h6("(Baseline needs to be set)")
+                        column(3,style = "padding-top:10px", actionButton("x_anchor", "Set x-anchor", width = '100%')
+                        ),
+                        
+                        column(3, style = "padding-top:10px",
+                               actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
+                        ),
+                        column(3, style = "padding-top:10px",
+                               actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
                         )
                       ),
-                      
                       fluidRow(
                         column(3,
                                numericInput("axis1", "Set y min", value = NULL)
@@ -203,13 +217,15 @@ ui <- fluidPage(
                         column(3,
                                numericInput("axis2", "Set y max", value = NULL)
                         ),
-                        column(3, style = "padding-top:20px",
-                               actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
+                        
+                        column(3,
+                               selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%')
                         ),
-                        column(3, style = "padding-top:20px",
-                               actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
+                        column(3,
+                               textInput("name_area", "Optional: Name area", value = "", width = NULL, placeholder = "Unknown peak")
                         )
                       ),
+                      
                       fluidRow(
                         column(3,
                                numericInput("axis3", "Set x min", value = NULL)
@@ -217,23 +233,10 @@ ui <- fluidPage(
                         column(3,
                                numericInput("axis4", "Set x max", value = NULL)
                         ),
-                        column(3,
-                               selectInput("select_area", "Select area to quantify", choices = c("Total", "Monosomes", "Polysomes", "40S", "60S"), width = '100%')
-                        ),
-                        column(3,
-                               textInput("name_area", "Optional: Name new area", value = "", width = NULL, placeholder = "Unknown peak")
-                        )
-                      ),
-                      
-                      fluidRow(
-                        column(3,actionButton("baseline", "Set baseline", width = '100%')
-                        ),
-                        column(3,actionButton("x_anchor", "Set x-anchor", width = '100%')
-                        ),
-                        column(3,
+                        column(3, style = "padding-top:22px",
                                actionButton("quantify_area", "Quantify area", icon = icon("calculator"), width = '100%')
                         ),
-                        column(3,
+                        column(3, style = "padding-top:22px",
                                actionButton("take_over_name", "Add name", icon = icon("check-circle"), width = '100%')
                         )
                       ),
@@ -284,9 +287,35 @@ ui <- fluidPage(
                         
                       ),
                       
+                      fluidRow(
+                        column(6, 
+                               actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
+                        ),
+                        column(6, 
+                               actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
+                        )
+                      )
                       
                       
-                      #changing their color and linetype seing the changes directly in the plot
+                      
+                     
+               ),
+               
+               column(2, #changing their color and linetype seing the changes directly in the plot
+                      
+                      
+                      fluidRow(
+                        radioButtons("color_palette", "Select default color palette:",
+                                     c("Dark palette" = "dark_palette",
+                                       "Rainbow palette" = "rainbow_palette",
+                                       "Color blind friendly palette" = "color_blind"
+                                     ), selected = "dark_palette"),
+                        style = "padding-top:20px"
+                      ),
+                      
+                      fluidRow(
+                        tags$h6("Adjust selected profile yourself:")
+                      ),
                       
                       fluidRow(
                         column(5, 
@@ -299,35 +328,15 @@ ui <- fluidPage(
                         column(3, style = "padding-left:0px",
                                numericInput("linewidth", "Width", value = 1)
                         )
-                      ),
-                      
-                      fluidRow(
-                        radioButtons("color_palette", "Select default color palette:",
-                                     c("Dark palette" = "dark_palette",
-                                       "Rainbow palette" = "rainbow_palette",
-                                       "Color blind friendly palette" = "color_blind"
-                                     ), selected = "dark_palette"),
-                        style = "padding-top:20px"
-                      ),
-                      
-                      fluidRow(
-                        column(6, 
-                               actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
-                        ),
-                        column(6, 
-                               actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
-                        )
                       )
+                      
                ),
                
                column(2,
                       downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
                       checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
                       checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL)
-               ),
-               
-               column(2)
+                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL))
              )
              
     ),
@@ -347,12 +356,12 @@ ui <- fluidPage(
              tableOutput("csv_file")),
     # FOURTH TAB 
     # shows Rmd manual  
-    #tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
-    #         fluidRow(
-    #           column(2),
-    #           column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
-    #           column(2))
-    #),
+    tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
+             fluidRow(
+               column(2),
+               column(8, htmltools::includeMarkdown("C:/Users/chiar/Documents/University Heidelberg MBSc/Practical Stoecklin 6 weeks/Shiny app/RMD_menu_template_2022.Rmd")),
+               column(2))
+    ),
     # FIFTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
