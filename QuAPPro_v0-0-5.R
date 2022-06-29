@@ -356,12 +356,12 @@ ui <- fluidPage(
              tableOutput("csv_file")),
     # FOURTH TAB 
     # shows Rmd manual  
-    tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
-             fluidRow(
-               column(2),
-               column(8, htmltools::includeMarkdown("C:/Users/chiar/Documents/University Heidelberg MBSc/Practical Stoecklin 6 weeks/Shiny app/RMD_menu_template_2022.Rmd")),
-               column(2))
-    ),
+    #tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
+   #          fluidRow(
+   #            column(2),
+   #            column(8, htmltools::includeMarkdown("/home/shiny/RMD_menu_template_2022.Rmd")),
+    #           column(2))
+  #  ),
     # FIFTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("exclamation-circle", style = "color:blue"), 
