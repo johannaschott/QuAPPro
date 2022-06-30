@@ -149,10 +149,10 @@ ui <- fluidPage(
                       
                       
                ),
-               column(4,
+               column(4, style = "padding-top:22px",
                       plotOutput("plot_single", click = "click")
                ),
-               column(4,
+               column(4, style = "padding-top:22px",
                       plotOutput("plot_align")
                ),
                column(2, style = "padding-right:22px",
@@ -1025,9 +1025,9 @@ server <- function(input, output, session) {
     par(mar = c(0, 5, 0.5, 2)) 
     plot(xvalue(), fluorescence(), type = "l", xaxt = "n", col = "darkgreen", 
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 2)
+         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 2.2)
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2)
+    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1063,14 +1063,14 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()), mgp = c(3.5, 0.8, 0),
-         yaxt = "n", xaxt = "n", cex.lab = 2
+         yaxt = "n", xaxt = "n", cex.lab = 2.2
     )
     
     
-    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2)
+    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2.2)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1452,7 +1452,7 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "Relative position", las = 1,
          col = colors_vector()[f], mgp = c(3.5, 1, 0), 
          ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
-         yaxt = "n", xaxt = "n", cex.lab = 2
+         yaxt = "n", xaxt = "n", cex.lab = 2.2
     )
     
     
@@ -1472,10 +1472,10 @@ server <- function(input, output, session) {
     }
     
     a <- axTicks(1)
-    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2)
+    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2.2)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2)
+    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
     
     for(f in files_to_plot()[-1])
     {
@@ -1520,7 +1520,7 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "", las = 1,
          col = colors_vector()[f], mgp = c(3.5, 0.8, 0), 
          ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
-         yaxt = "n", xaxt = "n", cex.lab = 2
+         yaxt = "n", xaxt = "n", cex.lab = 2.2
     )
     # store values in df for creating fluo alignment table
     y_aligned <- values_fluorescence()[[f]]
@@ -1532,7 +1532,7 @@ server <- function(input, output, session) {
     csv_file_df_fluo <- df
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2)
+    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
     
     for(f in  files_in_al_fluo[-1])
     {
