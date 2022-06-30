@@ -459,6 +459,10 @@ server <- function(input, output, session) {
   val <- reactiveValues(
     files_to_align = vector()
   )
+  
+  val <- reactiveValues(
+    files_to_plot = vector()
+  )
   val <- reactiveValues(
     remove_files_list = vector()
   )
@@ -500,6 +504,8 @@ server <- function(input, output, session) {
   val <- reactiveValues(
     ymax_collected_fl = list()
   )
+  
+  
   
   
   ### INITIAL LOADED FILES
@@ -892,11 +898,11 @@ server <- function(input, output, session) {
   observeEvent({input$select_alignment
     input$color_palette},  {
       req(input$select_alignment)
-      updateColourInput(session, "color", value = colors_vector()[[input$select_alignment]])
-      updateNumericInput(session, "linewidth", value = linewidth_vector()[[input$select_alignment]]  )
+      updateColourInput(session, "color", value = colors_vector()[input$select_alignment])
+      updateNumericInput(session, "linewidth", value = linewidth_vector()[input$select_alignment]  )
       updateSelectInput(session, "linetype", 
                         selected = c("solid", "dashed", "dotted",
-                                     "dotdash", "longdash", "twodash")[ lines_vector()[[input$select_alignment]] ])
+                                     "dotdash", "longdash", "twodash")[ lines_vector()[input$select_alignment] ])
     })
   
   
@@ -941,33 +947,33 @@ server <- function(input, output, session) {
   # but there is not fluorescence signal
   # or there was not baseline set for at least on fluorescence signal
   observeEvent(input$show_fl_al,{
-    if( !any( val$file_types[files_to_plot()] == "csv_fluo") & input$show_fl_al){
+    if( !any( val$file_types[val$files_to_plot] == "csv_fluo") & input$show_fl_al){
       showNotification("None of your aligned profiles contains a fluorescence signal (column 'SampleFluor').",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
-      if( !all( val$file_types[files_to_plot()] == "csv_fluo") & input$show_fl_al  ){
+      if( !all( val$file_types[val$files_to_plot] == "csv_fluo") & input$show_fl_al  ){
         showNotification("Some of your aligned profiles do not contain a fluorescence signal (column 'SampleFluor').",
                          duration = NULL, type = "warning")
       }
     }
     
-    if(any( val$file_types[files_to_plot()] == "csv_fluo") & is.null(val$baseline_fl) & input$show_fl_al){
+    if(any( val$file_types[val$files_to_plot] == "csv_fluo") & is.null(val$baseline_fl) & input$show_fl_al){
       showNotification("You did not set a baseline for your fluorescence profiles.",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
-      if( any( val$file_types[files_to_plot()] == "csv_fluo") & !all( names(val$file_types[files_to_plot()] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+      if( any( val$file_types[val$files_to_plot] == "csv_fluo") & !all( names(val$file_types[val$files_to_plot] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
         showNotification("Some of your fluorescence profiles do not have a baseline.",
                          duration = NULL, type = "warning")
       }
     }
   })
   
-  # show notification if how fluorescence was selected already but a new file in files_to_plot()
+  # show notification if how fluorescence was selected already but a new file in val$files_to_plot
   # does not contain a fluorescence signal
-  observeEvent(files_to_plot(), {
-    if( !all( names(val$file_types[files_to_plot()] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+  observeEvent(val$files_to_plot, {
+    if( !all( names(val$file_types[val$files_to_plot] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
       showNotification("Some of your fluorescence profiles do not have a baseline.",
                        duration = NULL, type = "warning")
     }
@@ -976,40 +982,12 @@ server <- function(input, output, session) {
   
   
   # show notification when normalization to length or height is set but total area is missing
-  observeEvent(input$normalize_length,{
+  observe({
     files_with_total <- names(val$sum_areas[["Total"]])
-    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_length ){
+    if(!all( val$files_to_plot %in% files_with_total ) & (input$normalize_length | input$normalize_height) ){
       showNotification("Please select a total area for all profiles in the alignment.",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "normalize_length", value = FALSE)
-    }
-  })
-  
-  # show notification when normalization to length or height is set but total area is missing
-  observeEvent(input$normalize_height,{
-    files_with_total <- names(val$sum_areas[["Total"]])
-    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_height ){
-      showNotification("Please select a total area for all profiles in the alignment.",
-                       duration = NULL, type = "error")
-      updateCheckboxInput(session, "normalize_height", value = FALSE)
-    }
-  })
-  
-  # show notification when normalization to length or height is set but total area is missing
-  observeEvent(files_to_plot(),{
-    files_with_total <- names(val$sum_areas[["Total"]])
-    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_length ){
-      showNotification("Some profiles in the alignment do not have a total area.",
-                       duration = NULL, type = "error")
-      updateCheckboxInput(session, "normalize_length", value = FALSE)
-    }
-  })
-  
-  observeEvent(files_to_plot(),{
-    files_with_total <- names(val$sum_areas[["Total"]])
-    if(!all( files_to_plot() %in% files_with_total ) & input$normalize_height ){
-      showNotification("Some profiles in the alignment do not have a total area.",
-                       duration = NULL, type = "error")
       updateCheckboxInput(session, "normalize_height", value = FALSE)
     }
   })
@@ -1152,8 +1130,8 @@ server <- function(input, output, session) {
   # Create alignment plot
   
   # Opportunity to remove and add files again to files_to_plot vector
-  files_to_plot <- reactive({
-    val$files_to_align[!val$files_to_align %in% val$remove_files_list]
+  observe({
+    val$files_to_plot <- val$files_to_align[!val$files_to_align %in% val$remove_files_list]
   })
   
   # move files up or down in the val$files_to_align vector
@@ -1190,18 +1168,18 @@ server <- function(input, output, session) {
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
   colors_vector <- reactive({
     if(input$color_palette == "dark_palette"){
-      dummy <- qualitative_hcl(length(files_to_plot()), palette = "Dark 3") 
+      dummy <- qualitative_hcl(length(val$files_to_plot), palette = "Dark 3") 
     }
     if(input$color_palette == "rainbow_palette"){
-      dummy <- rainbow(length(files_to_plot())) 
+      dummy <- rainbow(length(val$files_to_plot)) 
     }
     if(input$color_palette == "color_blind"){
       pal <- c("#000000", "#ff6db6", "#006ddb", "#920000",
                "#b66dff", "#004949", "#ffb6db", "#6db6ff", "#924900",
                "#24ff24", "#929200", "#490092", "#b6dbff", "#db6d00", "#ffff6d")
-      dummy <- rep(pal, ceiling( length( files_to_plot() )/length(pal ) ) )
+      dummy <- rep(pal, ceiling( length( val$files_to_plot )/length(pal ) ) )
     }
-    names(dummy) <- sort(files_to_plot())
+    names(dummy) <- sort(val$files_to_plot)
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
     }
@@ -1210,8 +1188,8 @@ server <- function(input, output, session) {
   
   # create linetype values, solid lines as initial linetype, further replaced by selected linetype
   lines_vector <- reactive({
-    dummy <- rep(1, length(files_to_plot()))
-    names(dummy) <- files_to_plot()
+    dummy <- rep(1, length(val$files_to_plot))
+    names(dummy) <- val$files_to_plot
     if (length(val$linetype_collected) > 0){
       dummy[names(val$linetype_collected)] <- unlist(val$linetype_collected)
     }
@@ -1220,8 +1198,8 @@ server <- function(input, output, session) {
   
   # create linewidth vector, linewidth 1 as initial linewidth, further replaced by selected linetype
   linewidth_vector <- reactive({
-    dummy <- rep(1, length(files_to_plot()))
-    names(dummy) <- files_to_plot()
+    dummy <- rep(1, length(val$files_to_plot))
+    names(dummy) <- val$files_to_plot
     if (length(val$linewidth_collected) > 0){
       dummy[names(val$linewidth_collected)] <- unlist(val$linewidth_collected)
     }
@@ -1232,7 +1210,7 @@ server <- function(input, output, session) {
   norm_factor <- reactive({
     dummy <- vector()
     files_with_total <- names( val$sum_areas[["Total"]])
-    for(f in files_to_plot()){
+    for(f in val$files_to_plot){
       if((f %in% files_with_total) & input$normalize_height){
         # normalization y-values
         dummy[f] <- val$sum_areas[["Total"]][f]/val$sum_areas[["Total"]][files_with_total[1]]
@@ -1247,7 +1225,7 @@ server <- function(input, output, session) {
   norm_factor_x <- reactive({
     dummy <- vector()
     files_with_total <- names( val$sum_areas[["Total"]])
-    for(f in files_to_plot()){
+    for(f in val$files_to_plot){
       if( (f %in% files_with_total) & input$normalize_length){
         dummy[f] <- (round(val$area_ends[["Total"]][f] - val$area_starts[["Total"]][f])/(round(val$area_ends[["Total"]][files_with_total[1]] - val$area_starts[["Total"]][files_with_total[1]])))
       }else{
@@ -1259,7 +1237,7 @@ server <- function(input, output, session) {
   
   # determine normalized y-values of fluorescence, only for files with baseline
   values_fluorescence <- reactive({
-    if(any(val$file_types[files_to_plot()] == "csv_fluo") )
+    if(any(val$file_types[val$files_to_plot] == "csv_fluo") )
     {
       dummy <- list()
       for(f in names(val$baseline_fl)) # only go through fluorescence signals with baseline
@@ -1277,7 +1255,7 @@ server <- function(input, output, session) {
   
   values_list <- reactive({
     dummy <- list()
-    for(f in files_to_plot())
+    for(f in val$files_to_plot)
     {
       if(val$factors_list[[f]] == (0.1/60) & grepl(".pks",as.character(f))){
         next_y <- read.table(val$paths_collected[f], dec = ",", header = F)$V3
@@ -1300,26 +1278,26 @@ server <- function(input, output, session) {
   # determine shift along x-axis for all:
   shifts <- reactive({
     # find max anchor of all files to be aligned
-    all_anchors <- (val$anchor[files_to_plot()])/norm_factor_x()[files_to_plot()]
+    all_anchors <- (val$anchor[val$files_to_plot])/norm_factor_x()[val$files_to_plot]
     super_anchor <- max(all_anchors)
     dummy <- super_anchor - all_anchors
-    names(dummy) <- files_to_plot()
+    names(dummy) <- val$files_to_plot
     dummy
   })
   
   # find starts and ends of aligned profiles
   aligned_starts <- reactive({
-    dummy <- ((1/norm_factor_x()[files_to_plot()] + (shifts())))
-    names(dummy) <- files_to_plot()
+    dummy <- ((1/norm_factor_x()[val$files_to_plot] + (shifts())))
+    names(dummy) <- val$files_to_plot
     dummy
   })
   
   aligned_ends <- reactive({
     # store lengths of the profiles 
     profile_lengths <- sapply(values_list(), FUN = length)
-    names(profile_lengths) <- files_to_plot()
-    dummy <- ((profile_lengths/norm_factor_x()[files_to_plot()] + (shifts())))
-    names(dummy) <- files_to_plot()
+    names(profile_lengths) <- val$files_to_plot
+    dummy <- ((profile_lengths/norm_factor_x()[val$files_to_plot] + (shifts())))
+    names(dummy) <- val$files_to_plot
     dummy
   })
   
@@ -1329,13 +1307,13 @@ server <- function(input, output, session) {
   
   # find maximum of y-axis values for polysome profiles
   ymax_all <- reactive({
-    profile_heights <- sapply(values_list()[files_to_plot()], FUN = max)
+    profile_heights <- sapply(values_list()[val$files_to_plot], FUN = max)
     max(profile_heights )
   })
   
   # find maximum of y-axis values for fluorescence profiles
   ymax_all_fl <- reactive({
-    profile_heights <- sapply(values_fluorescence()[files_to_plot()], FUN = max)
+    profile_heights <- sapply(values_fluorescence()[val$files_to_plot], FUN = max)
     max(profile_heights )
   })
   
@@ -1345,19 +1323,19 @@ server <- function(input, output, session) {
   
   # find maximum of y-axis values for polysome profiles
   ymin_all <- reactive({
-    profile_mins <- sapply(values_list()[files_to_plot()], FUN = min)
+    profile_mins <- sapply(values_list()[val$files_to_plot], FUN = min)
     min(profile_mins )
   })
   
   # find maximum of y-axis values for fluorescence profiles
   ymin_all_fl <- reactive({
-    profile_mins <- sapply(values_fluorescence()[files_to_plot()], FUN = min)
+    profile_mins <- sapply(values_fluorescence()[val$files_to_plot], FUN = min)
     min(profile_mins )
   })
   
   # axis labels are modified if there are more than three numerals
   lost_num_al_fl <- reactive({
-    max_numeral <- max( floor(log10(abs( unlist(values_fluorescence()[intersect( files_to_plot(), names(val$baseline_fl) ) ] ) ))) + 1 ) # how many numerals has the maximum UV absorption?
+    max_numeral <- max( floor(log10(abs( unlist(values_fluorescence()[intersect( val$files_to_plot, names(val$baseline_fl) ) ] ) ))) + 1 ) # how many numerals has the maximum UV absorption?
     
     if(max_numeral > 2 ){
       10^(max_numeral - 2)
@@ -1367,7 +1345,7 @@ server <- function(input, output, session) {
   })
   
   lost_num_al_pol <- reactive({
-    max_numeral <- max( floor(log10(abs( unlist(values_list()[files_to_plot()]) ))) + 1 ) # how many numerals has the maximum UV absorption?
+    max_numeral <- max( floor(log10(abs( unlist(values_list()[val$files_to_plot]) ))) + 1 ) # how many numerals has the maximum UV absorption?
     
     if(max_numeral > 2 ){
       10^(max_numeral - 2)
@@ -1415,22 +1393,25 @@ server <- function(input, output, session) {
   
   
   
-  
   observe({
-    req(val$files_to_align)
-    updateNumericInput(session, "axis3_a", value = round( xmin_all() /lost_num_al_Index(), digits = 2 ) )
-    updateNumericInput(session, "axis4_a", value = round( xmax_all() /lost_num_al_Index(), digits = 2 ) )
-    updateNumericInput(session, "axis1_a", value = round( ymin_all()/lost_num_al_pol(), digits = 2 ) )
-    updateNumericInput(session, "axis2_a", value = round( ymax_all()/lost_num_al_pol(), digits = 2 ) )
+    if(length(val$files_to_plot >= 1))
+    {
+      updateNumericInput(session, "axis3_a", value = round( xmin_all() /lost_num_al_Index(), digits = 2 ) )
+      updateNumericInput(session, "axis4_a", value = round( xmax_all() /lost_num_al_Index(), digits = 2 ) )
+      updateNumericInput(session, "axis1_a", value = round( ymin_all()/lost_num_al_pol(), digits = 2 ) )
+      updateNumericInput(session, "axis2_a", value = round( ymax_all()/lost_num_al_pol(), digits = 2 ) )
+    }
   })
   
   # let axis limits update for fluorescence axis
   observe({
-    req(val$files_to_align)
-    req(val$baseline_fl)
-    req(input$show_fl_al)
-    updateNumericInput(session, "axis1_a_fl", value = round( ymin_all_fl() /lost_num_al_fl(), digits = 2 ) )
-    updateNumericInput(session, "axis2_a_fl", value = round( ymax_all_fl() /lost_num_al_fl(), digits = 2 ) )
+    if(length(val$files_to_plot >= 1))
+    {
+      req(val$baseline_fl)
+      req(input$show_fl_al)
+      updateNumericInput(session, "axis1_a_fl", value = round( ymin_all_fl() /lost_num_al_fl(), digits = 2 ) )
+      updateNumericInput(session, "axis2_a_fl", value = round( ymax_all_fl() /lost_num_al_fl(), digits = 2 ) )
+    }
   })
   
   
@@ -1444,7 +1425,7 @@ server <- function(input, output, session) {
       ylab <- paste("UV abs. (x ", lost_num_al_pol(), ")", sep = "")
     }
     
-    f <- files_to_plot()[1]
+    f <- val$files_to_plot[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(5, 5, 0, 2)) 
     plot(x, values_list()[[f]], type = "l", lty = lines_vector()[f],
@@ -1467,7 +1448,7 @@ server <- function(input, output, session) {
     
     ### Shows anchor (when "Display x-anchor in alignment" is selected)
     if(input$anchor_line == TRUE){
-      anchor_line <- val$anchor[files_to_plot()[1]] / norm_factor_x()[files_to_plot()[1]] + shifts()[files_to_plot()[1]]
+      anchor_line <- val$anchor[val$files_to_plot[1]] / norm_factor_x()[val$files_to_plot[1]] + shifts()[val$files_to_plot[1]]
       abline(v = anchor_line, col = "red", lty=2)
     }
     
@@ -1477,7 +1458,7 @@ server <- function(input, output, session) {
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
     
-    for(f in files_to_plot()[-1])
+    for(f in val$files_to_plot[-1])
     {
       x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
       
@@ -1494,8 +1475,8 @@ server <- function(input, output, session) {
       points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
              lwd = linewidth_vector()[f], col = colors_vector()[f])
     }
-    legend("topright", legend = files_to_plot(), lty = lines_vector()[files_to_plot()], 
-           lwd = linewidth_vector()[files_to_plot()], col = colors_vector()[files_to_plot()],
+    legend("topright", legend = val$files_to_plot, lty = lines_vector()[val$files_to_plot], 
+           lwd = linewidth_vector()[val$files_to_plot], col = colors_vector()[val$files_to_plot],
            bty = "n", cex = 2
     )
     
@@ -1511,7 +1492,7 @@ server <- function(input, output, session) {
       ylab <- paste("Fluo. (x ", lost_num_al_fl(), ")", sep = "")
     }
     
-    files_in_al_fluo <- files_to_plot()[files_to_plot() %in% intersect(names(val$baseline_fl),  names(val$baseline))] # this is necessary to maintain the order as given by files_to_plot()
+    files_in_al_fluo <- val$files_to_plot[val$files_to_plot %in% intersect(names(val$baseline_fl),  names(val$baseline))] # this is necessary to maintain the order as given by val$files_to_plot
     f <-  files_in_al_fluo[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(0, 5, 0.5, 2)) 
@@ -1567,8 +1548,8 @@ server <- function(input, output, session) {
   }
   
   output$plot_align <- renderPlot({
-    req(files_to_plot())
-    if(length(files_to_plot()) >= 1)
+    req(val$files_to_plot)
+    if(length(val$files_to_plot) >= 1)
     {
       plot_alignment()
     }
