@@ -106,7 +106,8 @@ ui <- fluidPage(
     # FIRST TAB
     tabPanel(tags$strong("Analysis profiles"), icon = icon("chart-area"), # updated to newer version
              fluidRow(column(2),
-                      column(4, tags$h4(tags$strong("Single profiles for quantification"))),
+                      column(4, tags$h4(tags$strong("Single profiles for quantification")
+                                        )),
                       column(6, tags$h4(tags$strong("Multiple aligned profiles")))),
              
              fluidRow(
@@ -161,7 +162,7 @@ ui <- fluidPage(
                                
                                # show fluorescence signal or not?
                                column(12,  
-                                      checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL),
+                                      checkboxInput("show_fl_al", "Show fluorescence signal", value = FALSE, width = NULL)
                                              ),
                                
                                column(6, 
@@ -304,7 +305,7 @@ ui <- fluidPage(
                         column(6, 
                                actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
                         ),
-                        style = "padding-right:35px",
+                        style = "padding-right:35px"
                       )
                       
                       
@@ -330,14 +331,14 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(5, 
-                               colourInput("color", "Colors", palette = "square")
+                               colourInput("color", "Colors", palette = "square", value = "#FFFFFF")
                         ),
                         column(4, style = "padding-left:0px", 
                                selectInput("linetype", "Type", choices = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), 
                                            selected = "solid")
                         ),
                         column(3, style = "padding-left:0px",
-                               numericInput("linewidth", "Width", value = 1)
+                               numericInput("linewidth", "Width", value = 1, min = 0)
                         )
                       )
                       
@@ -431,6 +432,9 @@ server <- function(input, output, session) {
   )
   val <- reactiveValues(
     colors_collected = list()
+  )
+  val <- reactiveValues(
+    color_vector = vector()
   )
   val <- reactiveValues(
     linetype_collected = list()
@@ -833,12 +837,9 @@ server <- function(input, output, session) {
   
   # create "remove vector" containing files selected by remove button. Only take files into the vector that are not already there
   observeEvent(input$remove_file,{
-    req(val$files_to_align)
-    if(sum(str_detect(val$remove_files_list,
-                      intersect(names(val$baseline[input$select_alignment]),
-                                names(val$anchor[input$select_alignment]))))== 0)
-      val$remove_files_list <- c((intersect(names(val$baseline[input$select_alignment]),
-                                            names(val$anchor[input$select_alignment]))), val$remove_files_list)
+    req(val$files_to_align) 
+        val$remove_files_list <- unique( c(val$remove_files_list, input$select_alignment) )
+        
   })
   # Create "add vector" for removing files again from remove list (so addition to alignment again)
   observeEvent(input$add_file,{
@@ -846,12 +847,6 @@ server <- function(input, output, session) {
     add_vector <- c((intersect(names(val$baseline[input$select_alignment]),
                                names(val$anchor[input$select_alignment]))), val$add_files_list)
     val$remove_files_list <- val$remove_files_list[!val$remove_files_list %in% add_vector] 
-  })
-  
-  # Let user change colors of the different plots (selected out of aligned files)
-  observeEvent(input$color, {
-    if(input$color != "#FFFFFF"){
-      val$colors_collected[[input$select_alignment]] <- input$color}
   })
   
   # save axis limits set by the user for single profiles
@@ -878,8 +873,19 @@ server <- function(input, output, session) {
     }
   })
   
+  # When a new profile is available for alignment, set the linetype to 1
+  observeEvent(val$files_to_align, {
+    val$linetype_collected[[rev( val$files_to_align)[1] ]] <- 1
+  })
+  
+  # When a new profile is available for alignment, set the line width to 1
+  observeEvent(val$files_to_align, {
+    val$linewidth_collected[[rev( val$files_to_align)[1] ]] <- 1
+  })
+  
   # Let user change linetypes of the different plots (selected out of aligned files)
   observeEvent(input$linetype, {
+    req(input$select_alignment)
     if(input$linetype == "solid")line_selected <- 1
     if(input$linetype == "dashed")line_selected <- 2
     if(input$linetype == "dotted")line_selected <- 3
@@ -891,18 +897,26 @@ server <- function(input, output, session) {
   
   # Let user change linewidths of the different plots (selected out of aligned files)
   observeEvent(input$linewidth, {
+    req(input$select_alignment)
     val$linewidth_collected[[input$select_alignment]] <- input$linewidth
   })
   
+  # Let user change colors of the different plots (selected out of aligned files)
+  observeEvent(input$color, {
+    req(input$select_alignment)
+    val$colors_collected[[input$select_alignment]] <- input$color
+  })
+  
+ 
   # update color, line type and width to the values of the selected profiles
-  observeEvent({input$select_alignment
-    input$color_palette},  {
+  # Caution: updateColourInput seems to require double square brackets [[]]!
+  observe({
       req(input$select_alignment)
-      updateColourInput(session, "color", value = colors_vector()[input$select_alignment])
-      updateNumericInput(session, "linewidth", value = linewidth_vector()[input$select_alignment]  )
+      updateColourInput(session, "color", value = val$color_vector[[input$select_alignment]])
+      updateNumericInput(session, "linewidth", value = val$linewidth_collected[[input$select_alignment]]  )
       updateSelectInput(session, "linetype", 
                         selected = c("solid", "dashed", "dotted",
-                                     "dotdash", "longdash", "twodash")[ lines_vector()[input$select_alignment] ])
+                                     "dotdash", "longdash", "twodash")[ val$linewidth_collected[[input$select_alignment]] ])
     })
   
   
@@ -963,7 +977,7 @@ server <- function(input, output, session) {
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl_al", value = FALSE)
     }else{
-      if( any( val$file_types[val$files_to_plot] == "csv_fluo") & !all( names(val$file_types[val$files_to_plot] == "csv_fluo") %in% names(val$baseline_fl) ) & input$show_fl_al  ){
+      if( any( val$file_types[val$files_to_plot] == "csv_fluo") & !all( names(val$file_types[val$file_types[val$files_to_plot] == "csv_fluo"]) %in% names(val$baseline_fl) ) & input$show_fl_al  ){
         showNotification("Some of your fluorescence profiles do not have a baseline.",
                          duration = NULL, type = "warning")
       }
@@ -1003,9 +1017,9 @@ server <- function(input, output, session) {
     par(mar = c(0, 5, 0.5, 2)) 
     plot(xvalue(), fluorescence(), type = "l", xaxt = "n", col = "darkgreen", 
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 2.2)
+         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.8)
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
+    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.75)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1041,14 +1055,14 @@ server <- function(input, output, session) {
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()), mgp = c(3.5, 0.8, 0),
-         yaxt = "n", xaxt = "n", cex.lab = 2.2
+         yaxt = "n", xaxt = "n", cex.lab = 1.8
     )
     
     
-    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2.2)
+    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.75)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.75)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1136,25 +1150,31 @@ server <- function(input, output, session) {
   
   # move files up or down in the val$files_to_align vector
   observeEvent(input$up, {
-    to_be_shifted <- which( val$files_to_align == input$select_alignment )
-    if(to_be_shifted > 1)
+    if(input$select_alignment %in% val$files_to_plot)
     {
-      files_order <- 1:length(val$files_to_align)
-      files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
-      files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
-      val$files_to_align <- val$files_to_align[files_order]
+      to_be_shifted <- which( val$files_to_plot == input$select_alignment )
+      if(to_be_shifted > 1)
+      {
+        files_order <- 1:length(val$files_to_plot)
+        files_order[to_be_shifted] <- files_order[to_be_shifted] - 1
+        files_order[to_be_shifted - 1] <- files_order[to_be_shifted - 1] + 1
+        val$files_to_plot <- val$files_to_plot[files_order]
+      }
     }
   })
   
   # move files up or down in the val$files_to_align vector
   observeEvent(input$down, {
-    to_be_shifted <- which( val$files_to_align == input$select_alignment )
-    if(to_be_shifted < length(val$files_to_align))
+    if(input$select_alignment %in% val$files_to_plot)
     {
-      files_order <- 1:length(val$files_to_align)
-      files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
-      files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
-      val$files_to_align <- val$files_to_align[files_order]
+      to_be_shifted <- which( val$files_to_plot == input$select_alignment )
+      if(to_be_shifted < length(val$files_to_plot) )
+      {
+        files_order <- 1:length(val$files_to_plot)
+        files_order[to_be_shifted] <- files_order[to_be_shifted] + 1
+        files_order[to_be_shifted + 1] <- files_order[to_be_shifted + 1] - 1
+        val$files_to_plot <- val$files_to_plot[files_order]
+      }
     }
   })
   
@@ -1166,7 +1186,7 @@ server <- function(input, output, session) {
   )
   
   # create color values, rainbow palette as initial colors, further replaced by selected color if selected
-  colors_vector <- reactive({
+  observe({
     if(input$color_palette == "dark_palette"){
       dummy <- qualitative_hcl(length(val$files_to_plot), palette = "Dark 3") 
     }
@@ -1183,28 +1203,9 @@ server <- function(input, output, session) {
     if (length(val$colors_collected) > 0){
       dummy[names(val$colors_collected) ] <- unlist(val$colors_collected)
     }
-    dummy
+    val$color_vector <- dummy
   })
-  
-  # create linetype values, solid lines as initial linetype, further replaced by selected linetype
-  lines_vector <- reactive({
-    dummy <- rep(1, length(val$files_to_plot))
-    names(dummy) <- val$files_to_plot
-    if (length(val$linetype_collected) > 0){
-      dummy[names(val$linetype_collected)] <- unlist(val$linetype_collected)
-    }
-    dummy
-  })
-  
-  # create linewidth vector, linewidth 1 as initial linewidth, further replaced by selected linetype
-  linewidth_vector <- reactive({
-    dummy <- rep(1, length(val$files_to_plot))
-    names(dummy) <- val$files_to_plot
-    if (length(val$linewidth_collected) > 0){
-      dummy[names(val$linewidth_collected)] <- unlist(val$linewidth_collected)
-    }
-    dummy
-  })
+
   
   # for normalization of surfaces:
   norm_factor <- reactive({
@@ -1366,31 +1367,35 @@ server <- function(input, output, session) {
   
   # When user selects other axis limits, limit values change 
   # (works for both single and aligned (+ normalized) plots)
+  observeEvent(input$axis1_a, {
+    val$ymin <- input$axis1_a*lost_num_al_pol()
+    }, 
+    ignoreInit = T)
   
-  ymin <- reactive({
-      input$axis1_a*lost_num_al_pol()
-  })
+  observeEvent(input$axis2_a, {
+    val$ymax <- input$axis2_a*lost_num_al_pol()
+  }, 
+  ignoreInit = T)
   
-  ymax <- reactive({
-      input$axis2_a*lost_num_al_pol()
-  })
+  observeEvent(input$axis1_a_fl, {
+    val$ymin_fl <- input$axis1_a_fl*lost_num_al_fl()
+  }, 
+  ignoreInit = T)
   
-  ymin_fl <- reactive({
-      input$axis1_a_fl*lost_num_al_fl()
-  })
+  observeEvent(input$axis2_a_fl, {
+    val$ymax_fl <- input$axis2_a_fl*lost_num_al_fl()
+  }, 
+  ignoreInit = T)
   
-  ymax_fl <- reactive({
-      input$axis2_a_fl*lost_num_al_fl()
-  })
+  observeEvent(input$axis3_a, {
+    val$xmin <- input$axis3_a*lost_num_al_Index()
+  }, 
+  ignoreInit = T)
   
-  xmin <- reactive({
-      input$axis3_a*lost_num_al_Index()
-  })
-  
-  xmax <- reactive({
-      input$axis4_a*lost_num_al_Index()
-  }) 
-  
+  observeEvent(input$axis4_a, {
+    val$xmax <- input$axis4_a*lost_num_al_Index()
+  }, 
+  ignoreInit = T)
   
   
   observe({
@@ -1428,12 +1433,12 @@ server <- function(input, output, session) {
     f <- val$files_to_plot[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(5, 5, 0, 2)) 
-    plot(x, values_list()[[f]], type = "l", lty = lines_vector()[f],
-         lwd = linewidth_vector()[f],
+    plot(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]],
+         lwd = val$linewidth_collected[[f]],
          ylab = ylab, xlab = "Relative position", las = 1,
-         col = colors_vector()[f], mgp = c(3.5, 1, 0), 
-         ylim = c(ymin(),ymax()), xlim = c(xmin(),xmax()),
-         yaxt = "n", xaxt = "n", cex.lab = 2.2
+         col = val$color_vector[f], mgp = c(3.5, 1, 0), 
+         ylim = c(val$ymin,val$ymax), xlim = c(val$xmin,val$xmax),
+         yaxt = "n", xaxt = "n", cex.lab = 1.8
     )
     
     
@@ -1453,10 +1458,10 @@ server <- function(input, output, session) {
     }
     
     a <- axTicks(1)
-    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 2.2)
+    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.75)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
+    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.75)
     
     for(f in val$files_to_plot[-1])
     {
@@ -1468,16 +1473,16 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂÃÂ¶nnen
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂÃÂÃÂÃÂ¶nnen
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
-      points(x, values_list()[[f]], type = "l", lty = lines_vector()[f], 
-             lwd = linewidth_vector()[f], col = colors_vector()[f])
+      points(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]], 
+             lwd = val$linewidth_collected[[f]], col = val$color_vector[f])
     }
-    legend("topright", legend = val$files_to_plot, lty = lines_vector()[val$files_to_plot], 
-           lwd = linewidth_vector()[val$files_to_plot], col = colors_vector()[val$files_to_plot],
-           bty = "n", cex = 2
+    legend("topright", legend = val$files_to_plot, lty = unlist(val$linetype_collected[val$files_to_plot]), 
+           lwd = unlist(val$linewidth_collected[val$files_to_plot]), col = val$color_vector[val$files_to_plot],
+           bty = "n", cex = 1.5
     )
     
     #create reactive dataframe of all plots to have access outside of renderPlot function
@@ -1496,12 +1501,12 @@ server <- function(input, output, session) {
     f <-  files_in_al_fluo[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     par(mar = c(0, 5, 0.5, 2)) 
-    plot(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f],
-         lwd = linewidth_vector()[f],
+    plot(x, values_fluorescence()[[f]], type = "l", lty = val$linetype_collected[[f]],
+         lwd = val$linewidth_collected[[f]],
          ylab = ylab, xlab = "", las = 1,
-         col = colors_vector()[f], mgp = c(3.5, 0.8, 0), 
-         ylim = c(ymin_fl(),ymax_fl()), xlim = c(xmin(),xmax()),
-         yaxt = "n", xaxt = "n", cex.lab = 2.2
+         col = val$color_vector[f], mgp = c(3.5, 0.8, 0), 
+         ylim = c(val$ymin_fl,val$ymax_fl), xlim = c(val$xmin,val$xmax),
+         yaxt = "n", xaxt = "n", cex.lab = 1.8
     )
     # store values in df for creating fluo alignment table
     y_aligned <- values_fluorescence()[[f]]
@@ -1513,7 +1518,7 @@ server <- function(input, output, session) {
     csv_file_df_fluo <- df
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 2.2)
+    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.75)
     
     for(f in  files_in_al_fluo[-1])
     {
@@ -1529,8 +1534,8 @@ server <- function(input, output, session) {
       colnames(df2) <- c("Index", paste0(as.character(str_remove(f, ".pks|.csv|.txt")),"_fluo"))
       csv_file_df_fluo <- merge(csv_file_df_fluo, df2, by="Index", all = T)
       
-      points(x, values_fluorescence()[[f]], type = "l", lty = lines_vector()[f], 
-             lwd = linewidth_vector()[f], col = colors_vector()[f])
+      points(x, values_fluorescence()[[f]], type = "l", lty = val$linetype_collected[[f]], 
+             lwd = val$linewidth_collected[[f]], col = val$color_vector[f])
     }
     
     #create reactive dataframe of all plots to have access outside of renderPlot function
