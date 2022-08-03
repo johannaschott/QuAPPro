@@ -12,6 +12,8 @@ library(shinyFiles)
 library(plyr)
 library(colorspace)
 library(markdown)
+library(emg)
+
 
 ###################################################
 
@@ -43,6 +45,7 @@ closest_point <- function(x, y, X, Y){
   closest <- order(all_dist, decreasing = F)[1]
   return(X[closest])
 }
+
 find_closest_inflections <- function(y, a, range)
 {
   d <- diff(y, difference = 2)
@@ -61,17 +64,69 @@ find_closest_inflections <- function(y, a, range)
   return(all_minmax[closest])
 }
 
-smooth_profile <- function(y, half_window)
+smooth_profile <- function(y, spar)
 {
-  window <- 2*half_window + 1
-  extension <- rep(NA, half_window)
-  y_extended <- c(extension, y, extension)
-  y_smooth <- vector()
-  for(i in 1:(length(y_extended) - (window - 1) ) )
+  if(is.null(spar) )
   {
-    y_smooth[i] <- mean( y_extended[i:(i+window)], na.rm = T )
+    return( smooth.spline(1:length(y), y, spar = spar)$y )
+  }else{
+    if(spar == 0)
+    {
+    return(y)
+    }else{
+      return( smooth.spline(1:length(y), y, spar = spar)$y )
+    }
+    
   }
-  return(y_smooth)
+}
+
+second_deriv <- function(y)
+{
+  return( diff(y, differences = 2) )
+}
+
+all_min <- function(y, range)
+{
+  d <- diff(y )
+  d0 <- d
+  d0[ d > 0 ] <- 1
+  d0[ d < 0 ] <- -1
+  seg <- rle(d0)
+  
+  seg_names <- 1:length(seg$values)
+  seg_names <- unlist( mapply(seg_names, seg$lengths, FUN = rep) )
+  seg_sum <- by(d, seg_names, sum)
+  
+  seg_ends <- cumsum(seg$lengths) # last nt of a segment
+  seg_starts <- c(1, seg_ends[-length(seg_ends)] + 1) # first nt of a segment
+  up_down <- which( seg$lengths > range & seg$values != 0  )
+  up_down_change <- diff( seg$values[up_down]) == 2
+  change_seg <- up_down[which(up_down_change) + 1]
+  before_change_seg <-  up_down[which(up_down_change)]
+  all_min <- 0.5 + (seg_ends[before_change_seg] + seg_starts[change_seg]) / 2
+  return(all_min)
+}
+
+all_max <- function(y, range)
+{
+  d <- diff(y )
+  d0 <- d
+  d0[ d > 0 ] <- 1
+  d0[ d < 0 ] <- -1
+  seg <- rle(d0)
+  
+  seg_names <- 1:length(seg$values)
+  seg_names <- unlist( mapply(seg_names, seg$lengths, FUN = rep) )
+  seg_sum <- by(d, seg_names, sum)
+  
+  seg_ends <- cumsum(seg$lengths) # last nt of a segment
+  seg_starts <- c(1, seg_ends[-length(seg_ends)] + 1) # first nt of a segment
+  up_down <- which( seg$lengths > range & seg$values != 0  )
+  up_down_change <- diff( seg$values[up_down]) == -2
+  change_seg <- up_down[which(up_down_change) + 1]
+  before_change_seg <-  up_down[which(up_down_change)]
+  all_max <- 0.5 + (seg_ends[before_change_seg] + seg_starts[change_seg]) / 2
+  return(all_max)
 }
 
 
@@ -104,7 +159,7 @@ ui <- fluidPage(
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
-    tabPanel(tags$strong("Analysis profiles"), icon = icon("chart-area"), # updated to newer version
+    tabPanel(tags$strong("Profile Analysis"), icon = icon("chart-area"), # updated to newer version
              fluidRow(column(2),
                       column(4, tags$h4(tags$strong("Single profiles for quantification")
                                         )),
@@ -138,15 +193,15 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(6, style = "padding-top:10px",
-                               numericInput("axis1_fl", "Set y min", value = NULL)
+                               numericInput("axis1_fl", "Set y min", value = NULL, step = 0.1)
                         ),
                         column(6, style = "padding-top:10px",
-                               numericInput("axis2_fl", "Set y max", value = NULL))),
+                               numericInput("axis2_fl", "Set y max", value = NULL, step = 0.1))),
                       
                       # introduce a slider for smoothing of the fluorescence signal
                       column(12,
                              fluidRow(sliderInput("slider1", label = "Smooth fluorescence profile", min = 0, 
-                                                  max = 100, value = 0)))
+                                                  max = 1, value = 0, step = 0.01)))
                       
                       
                ),
@@ -200,9 +255,11 @@ ui <- fluidPage(
                       
                       fluidRow(
                         
-                        column(3,style = "padding-top:10px", actionButton("baseline", "Set baseline", width = '100%')
+                        column(3,style = "padding-top:10px", actionButton("baseline", "Set baseline", width = '100%',
+                                                                          icon = icon("minus-circle"))
                         ),
-                        column(3,style = "padding-top:10px", actionButton("x_anchor", "Set x-anchor", width = '100%')
+                        column(3,style = "padding-top:10px", actionButton("x_anchor", "Set x-anchor", width = '100%',
+                                                                          icon = icon("anchor"))
                         ),
                         
                         column(3, style = "padding-top:10px",
@@ -214,10 +271,10 @@ ui <- fluidPage(
                       ),
                       fluidRow(
                         column(3, style = "padding-top:10px",
-                               numericInput("axis1", "Set y min", value = NULL)
+                               numericInput("axis1", "Set y min", value = NULL, step = 0.1)
                         ),
                         column(3, style = "padding-top:10px",
-                               numericInput("axis2", "Set y max", value = NULL)
+                               numericInput("axis2", "Set y max", value = NULL, step = 0.1)
                         ),
                         
                         column(3, style = "padding-top:10px",
@@ -230,10 +287,10 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(3, style = "padding-top:0px",
-                               numericInput("axis3", "Set x min", value = NULL)
+                               numericInput("axis3", "Set x min", value = NULL, step = 0.1)
                         ),
                         column(3, style = "padding-top:0px",
-                               numericInput("axis4", "Set x max", value = NULL)
+                               numericInput("axis4", "Set x max", value = NULL, step = 0.1)
                         ),
                         column(3, style = "padding-top:22px",
                                actionButton("quantify_area", "Quantify area", icon = icon("calculator"), width = '100%')
@@ -353,20 +410,156 @@ ui <- fluidPage(
              
     ),
     # SECOND TAB
+    # for user-guided peak-deconvolution
+    tabPanel(tags$strong("De-convolution"), icon = icon("cut"),
+             fluidRow(column(2),
+                      column(4, tags$h4(tags$strong("Single profile for de-convolution"))
+                      ),
+                      column(6)
+             ),
+             
+             fluidRow(
+                     column(2, style = "padding-left:20px",
+                            
+                            #Let user select their loaded files and set x-anchor and baseline
+                            selectInput("select2", "Select files", choices = c(), width = '100%'),
+                            # create inputs for user to set x and y axis limits, should start with initially set values before user input 
+                            fluidRow( 
+                              column(12, tags$h4(tags$strong("Identify peaks")))),
+                            # introduce a slider for smoothing of the fluorescence signal
+                            column(12,
+                                   fluidRow(sliderInput("slider2", label = "Smoothing", min = 0, 
+                                                        max = 1, value = 0, step = 0.01))),
+                            column(12,
+                                     fluidRow(sliderInput("slider3", label = "Resolution", min = 0, 
+                                                          max = 100, value = 95)
+                                     )
+                                   ),
+                            
+                            fluidRow(
+                              column(6,
+                                     checkboxInput("show_deriv", "Show 2nd deriv. minima", value = FALSE, width = NULL)
+                              ),
+                              column(6,
+                                     checkboxInput("show_local_max", "Show local maxima", value = TRUE, width = NULL)
+                              )
+                            ),
+                            fluidRow(
+                              column(12, style = "padding-left:20px",
+                                              tags$h4(tags$strong("De-convolution"))
+                                       )
+                            ),
+                            fluidRow(
+                              column(12, style = "padding-left:20px",
+                                     tags$h5(tags$strong("Select or add peaks by clicking into the plot."))
+                              )
+                            ),
+                                     
+                           
+                           fluidRow(
+                             column(6, style = "padding-top:10px",
+                                    numericInput("height", "Height", value = NULL, step = 0.5)
+                                    ),
+                             column(6, style = "padding-top:10px",
+                                    numericInput("SD", "Width", value = 0.1, min = 0.01, step = 0.01)
+                                    )
+                             ),
+                           
+                           fluidRow(
+                             column(12,
+                                    selectInput("peak_model", "Peak model", 
+                                                choices = c("Gauss", "EMG", "Bi-Gaussian"
+                                                            ),
+                                                selected = "Gauss", width = NULL)
+                             )
+                           ),
+                           
+                           fluidRow(
+                             column(12, sliderInput(
+                               "slider4", label = "Degree of asymmetry", value = 0, min = -1, max = 1,
+                               step = 0.01)
+                             )
+                           ),
+                           fluidRow(
+                             column(6,style = "padding-top:32px", actionButton("delete_peak", "Delete peak", width = '100%',
+                                                                               icon = icon("trash"))
+                                    ),
+                             column(6)
+                           )
+                      ),
+               
+                     column(8, style = "padding-top:22px", 
+                            textOutput("test"),
+                            plotOutput("plot_deconv", click = "click_deconv", height = 700)
+                     ),
+                     
+                     column(2, style = "padding-right:22px",
+                            # create inputs for user to set x and y axis limits, should start with initially set values before user input 
+                            
+                            fluidRow(tags$h4(tags$strong("Axis limits")),
+                                     column(6,
+                                            numericInput("axis1_d", "Set y min", value = NULL)),
+                                     column(6,
+                                            numericInput("axis2_d", "Set y max", value = NULL))
+                            ),
+                            fluidRow(
+                              column(6, 
+                                     numericInput("axis3_d", "Set x min", value = NULL)),
+                              column(6,
+                                     numericInput("axis4_d", "Set x max", value = NULL))
+                            ),
+                            fluidRow(
+                              column(12,
+                                     tags$h4(tags$strong("Quantification"))
+                              )
+                            ),
+                            fluidRow(
+                              column(6, style = "padding-top:10px",
+                                     selectInput("select_peak", "Peak to quantify", choices = c("40S", "60S", "Monosomes", "Halfmers"), width = '100%')
+                              ),
+                              column(6, style = "padding-top:10px",
+                                     textInput("name_peak", "Optional: Name peak", value = "", width = NULL, placeholder = "Unknown peak")
+                              )
+                            ),
+                            fluidRow(
+                              column(6, style = "padding-top:10px",
+                                     actionButton("quantify_peaks", "Quantify peak", icon = icon("calculator"), width = '100%')
+                              ),
+                              column(6, style = "padding-top:10px",
+                                     actionButton("take_over_peak", "Add name", icon = icon("check-circle"), width = '100%')
+                              )
+                            ),
+                            fluidRow(
+                              column(6,
+                                     downloadButton("downloadDeconv", "Download plot", icon = icon("file-download"), width = '100%')
+                              ),
+                              column(6),
+                              style = "padding-top:22px"
+                            )
+                     )
+          )
+    ),
+    # THIRD TAB
     # shows updating table of quantified areas for respective plots, download possible 
     tabPanel(tags$strong("Quantification summary"), icon = icon("list-alt"), 
-             tags$h4("Table of quantified polysome profile areas"),
-             tableOutput("quantification"),
-             tableOutput("ad_quantification"),
-             #textInput("filen_quant_user", "Insert quantification filename", value = "", width = NULL, placeholder = NULL),
-             downloadButton("downloadQuant", "Download .csv file")),
-    # THIRD TAB
+             column(6,
+                   tags$h4("Table of quantified areas"),
+                   tableOutput("quantification"),
+                   downloadButton("downloadQuant", "Download .csv file")
+             ),
+             column(6,
+                    tags$h4("Table of quantified peaks"),
+                    tableOutput("quantification_peaks"),
+                    downloadButton("downloadQuant_peaks", "Download .csv file")
+                    )
+                   ),
+    # FOURTH TAB
     # shows updating table of aligned (and normalized) profiles, download possible 
     tabPanel(tags$strong("Alignment table"), icon = icon("table"), 
              tags$h4("Table of all aligned (and normalized) profiles"),
              downloadButton("downloadData", "Download .csv file"),
              tableOutput("csv_file")),
-    # FOURTH TAB 
+    # FIFTH TAB 
     # shows Rmd manual  
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
              fluidRow(
@@ -375,7 +568,7 @@ ui <- fluidPage(
                column(2))
     ),
     
-    # FIFTH TAB
+    # SIXTH TAB
     # general information and impressum
     tabPanel(tags$strong("Release notes", style = "color:blue"), icon = icon("info", style = "color:blue"), 
              tags$h4("Release notes"),
@@ -385,7 +578,7 @@ ui <- fluidPage(
              )
     ),
     
-    # SIXTH TAB
+    # SEVENTH TAB
     # general information and impressum
     tabPanel(tags$strong("Contact", style = "color:blue"), icon = icon("address-card", style = "color:blue"), 
              tags$h4("About Us"),
@@ -697,14 +890,14 @@ server <- function(input, output, session) {
     # setting profile start
     if(val$buttons == 4)
       if(input$helper_functions == "peak_help"){
-        val$file_starts[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), 2),
+        val$file_starts[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), NULL),
                                                                 (closest_point(input$click$x, 
                                                                                input$click$y, 
                                                                                xvalue(),
                                                                                yvalue()))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$file_starts[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), 2),
+        val$file_starts[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
                                                                      (closest_point(input$click$x, 
                                                                                     input$click$y, 
                                                                                     xvalue(),
@@ -718,14 +911,14 @@ server <- function(input, output, session) {
     # setting profile ends
     if(val$buttons == 5)
       if(input$helper_functions == "peak_help"){
-        val$file_ends[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), 2),
+        val$file_ends[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
                                                                              xvalue(),
                                                                              yvalue()))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$file_ends[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), 2),
+        val$file_ends[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
                                                                    (closest_point(input$click$x, 
                                                                                   input$click$y, 
                                                                                   xvalue(),
@@ -750,14 +943,14 @@ server <- function(input, output, session) {
     # setting x-anchor
     if(val$buttons == 1)
       if(input$helper_functions == "peak_help"){
-        val$anchor[input$select] <- round(find_closest_minmax(smooth_profile(yvalue(), 2),
+        val$anchor[input$select] <- round(find_closest_minmax(smooth_profile(yvalue(), NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
                                                                              xvalue(),
                                                                              yvalue()))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$anchor[input$select] <- (find_closest_inflections(smooth_profile(yvalue(), 2),
+        val$anchor[input$select] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
                                                                              xvalue(),
@@ -1035,11 +1228,11 @@ server <- function(input, output, session) {
       }
     }
     if(input$green_lines){
-      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
-      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
+      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
+      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
     }
     if(input$red_lines){
-      abline(h = val$baseline_fl[input$select],col = "red", lty=2)
+      abline(h = val$baseline_fl[input$select],col = "red", lty=2, lwd = 2)
     }
   }
   
@@ -1077,13 +1270,13 @@ server <- function(input, output, session) {
     }
     # selected x-anchor and baseline are displayed if box is ticked
     if(input$red_lines){
-      abline(v = val$anchor[input$select]*val$factors_list[[input$select]],col = "red", lty=2)
-      abline(h = val$baseline[input$select],col = "red", lty=2)
+      abline(v = val$anchor[input$select]*val$factors_list[[input$select]],col = "red", lty=2, lwd = 2)
+      abline(h = val$baseline[input$select],col = "red", lty=2, lwd = 2)
     }
     # selected area starts and ends are displayed if box is ticked
     if(input$green_lines){
-      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
-      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2)
+      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
+      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
     }
   }
   
@@ -1132,7 +1325,7 @@ server <- function(input, output, session) {
   )
   
   output$downloadQuant <- downloadHandler(
-    filename = "quantification.csv",
+    filename = "AreaQuant.csv",
     content = function(file) {
       write.csv2( val$df_quant, file, row.names = F)
     }
@@ -1454,7 +1647,7 @@ server <- function(input, output, session) {
     ### Shows anchor (when "Display x-anchor in alignment" is selected)
     if(input$anchor_line == TRUE){
       anchor_line <- val$anchor[val$files_to_plot[1]] / norm_factor_x()[val$files_to_plot[1]] + shifts()[val$files_to_plot[1]]
-      abline(v = anchor_line, col = "red", lty=2)
+      abline(v = anchor_line, col = "red", lty=2, lwd = 2)
     }
     
     a <- axTicks(1)
@@ -1473,7 +1666,7 @@ server <- function(input, output, session) {
       df2 = list(x_aligned = x_aligned, y_aligned=y_aligned)
       attributes(df2) = list(names = names(df2),
                              row.names=1:max(length(x_aligned), length(y_aligned)), class='data.frame')
-      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) # muss auch noch ".csv" removen kÃÂÃÂÃÂÃÂ¶nnen
+      colnames(df2) <- c("Index", as.character(str_remove(f, ".pks|.csv|.txt"))) 
       csv_file_df <- merge(csv_file_df, df2, by="Index", all = T)
       
       # plot files in alignment
@@ -1588,6 +1781,485 @@ server <- function(input, output, session) {
       }
     }
   )
+  
+  
+  ### Peak de-convolution:
+  yvalue_deconv <- function()
+  {
+    yvalue() - val$baseline[input$select2]
+  }
+  
+  observe({
+    session$userData$files_list <- c(input$input_data$name[input$input_data$size != 0], session$userData$files_list)
+    updateSelectInput(session, "select2",
+                      choices = session$userData$files_list)
+  })
+  
+  observeEvent(input$select2, {
+    updateSelectInput(session, "select", selected = input$select2)
+  })
+  
+  observeEvent(input$select, {
+    updateSelectInput(session, "select2", selected = input$select)
+  })
+  
+  # update choices of peaks to be quantified with names given by the user
+  observeEvent(input$take_over_peak,{
+    session$userData$peak_list <- c(input$name_peak, session$userData$peak_list)
+    updateSelectInput(session, "select_peak",
+                      choices = c(session$userData$peak_list, "40S", "60S", "Monosomes", "Halfmers"))
+  })
+  
+  second_deriv_smoothed <- function()
+  {
+    smooth_profile( second_deriv( smooth_profile(yvalue_deconv(), input$slider2 )), input$slider2)
+  }
+  
+  second_deriv_min <- function()
+  {
+    resolution <- (1 - input$slider3/100 )*100
+    xvalue()[-c(1:2)] [ all_min( second_deriv_smoothed(), resolution ) ]
+  }
+  
+  profile_smoothed <- function()
+  {
+    smooth_profile(yvalue_deconv(), input$slider2 )
+  }
+  
+  local_max <- function()
+  {
+    resolution <- (1 - input$slider3/100 )*100
+    xvalue()[ all_max( yvalue_deconv(), resolution ) ]
+  }
+  
+  
+  plot_2nd_deriv <-function(){
+    par(mar = c(0, 5, 0.5, 2)) 
+    plot(xvalue()[-c(1:2)], second_deriv_smoothed(), type = "l", xaxt = "n", col = "black", 
+         las = 1, ylab = "2nd derivative", mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.8,
+         xlim = c(xmin_d(), xmax_d()) )
+    a <- axTicks(2)
+  }
+  
+  # When user selects other axis limits, limit values change 
+  val <- reactiveValues(
+    xmin_d_collected = list(),
+    xmax_d_collected = list(),
+    ymin_d_collected = list(),
+    ymax_d_collected = list()
+  )
+  
+  # save axis limits set by the user for single profiles
+  observeEvent(input$axis3_d, {
+    val$xmin_d_collected[[input$select2]] <- input$axis3_d
+  })
+  observeEvent(input$axis4_d, {
+    val$xmax_d_collected[[input$select2]] <- input$axis4_d
+  })
+  observeEvent(input$axis1_d, {
+    val$ymin_d_collected[[input$select2]] <- input$axis1_d
+  })
+  observeEvent(input$axis2_d, {
+    val$ymax_d_collected[[input$select2]] <- input$axis2_d
+  })
+  
+  ymin_d <- reactive({
+    if(isTruthy(val$ymin_d_collected[[input$select2]])){
+      val$ymin_d_collected[[input$select2]]*lost_num_pol()
+    }else{
+      0
+    }})
+  
+  
+  ymax_d <- reactive({
+    if(isTruthy(val$ymax_d_collected[[input$select2]])){
+      val$ymax_d_collected[[input$select2]]*lost_num_pol()
+    }else{
+      max(yvalue_deconv())
+    }})
+  
+  
+  xmin_d <- reactive({
+    if(isTruthy(val$xmin_d_collected[[input$select2]])){
+      val$xmin_d_collected[[input$select2]]
+    }else{
+      0
+    }})
+  
+  xmax_d <- reactive({
+    if(isTruthy(val$xmax_d_collected[[input$select2]])){
+      val$xmax_d_collected[[input$select2]]
+    }else{
+      max(xvalue())
+    }})
+  
+  observe({
+    req(yvalue_deconv())
+    updateNumericInput(session, "axis3_d", value = round(xmin_d(), digits = 2 ) )
+    updateNumericInput(session, "axis4_d", value = round(xmax_d(), digits = 2 ) )
+    updateNumericInput(session, "axis1_d", value = round(ymin_d()/lost_num_pol(), digits = 2) )
+    updateNumericInput(session, "axis2_d", value = round(ymax_d()/lost_num_pol(), digits = 2) )
+  })
+  
+  # add peak or change active peak by clicking into the plot:
+  # store peak information:
+  val <- reactiveValues(
+    peak_pos = list(), 
+    peak_height = list(),
+    peak_sd = list(),
+    active_peak = list(),
+    peak_asym = list(),
+    peak_type = list(),
+    peak_values = list()
+  )
+  
+  
+  
+  generate_peak <- function(x, peak_height, peak_pos, peak_sd, peak_asym, peak_type)
+  {
+    # Normal distribution for symmetric peaks
+    if( peak_asym == 0  |  peak_type == "Gauss")
+    {
+      Gauss <- dnorm(x, mean = peak_pos, sd = peak_sd )
+      cor_factor <- peak_height/max(Gauss)
+      return(Gauss*cor_factor)
+    }
+    
+    
+    # Exponentially modified Gauss, unless asymmetry is zero
+    if(peak_type == "EMG" & peak_asym != 0)
+    {
+      if(peak_asym > 0)
+      {
+        lambda <- 1/peak_asym
+        y1 <- demg(x, mu = peak_pos, sigma = peak_sd, lambda = lambda)
+        pos_of_max <- x[ order(y1, decreasing = TRUE)[1] ]
+        diff_to_mean <- pos_of_max - peak_pos
+        Gauss <- demg(x, mu = peak_pos - diff_to_mean, sigma = peak_sd, lambda = lambda)
+      }
+      if(peak_asym < 0)
+      {
+        lambda <- -1/peak_asym
+        # mirror position of peak along middle of profile
+        peak_pos_mirror <- median(x) + ( median(x) - peak_pos )
+        y1 <- demg(x, mu = peak_pos_mirror, sigma = peak_sd, lambda = lambda)
+        pos_of_max <- x[ order(y1, decreasing = TRUE)[1] ]
+        diff_to_mean <- pos_of_max - peak_pos_mirror
+        Gauss <- rev( demg(x, mu = peak_pos_mirror - diff_to_mean, sigma = peak_sd, lambda = lambda) )
+      }
+      cor_factor <- peak_height/max(Gauss)
+      return(Gauss*cor_factor)
+    }
+    
+    # Bi-Gaussian when selected, unless asymmetry is zero
+    if(peak_type == "Bi-Gaussian" & peak_asym != 0)
+    {
+      Gauss_left <- dnorm(x[x <= peak_pos ], mean = peak_pos, sd = peak_sd*(1 - peak_asym) )
+      Gauss_right <- dnorm(x[x >= peak_pos ], mean = peak_pos, sd = peak_sd*(1 + peak_asym) )
+      cor_factor_left <- peak_height/max(Gauss_left)
+      cor_factor_right <- peak_height/max(Gauss_right)
+      return( c( Gauss_left*cor_factor_left, Gauss_right[-1]*cor_factor_right ) )
+    }
+  }
+  
+  sum_of_Peaks <- function(x, peak_height, peak_pos, peak_sd, peak_asym, peak_type){
+    y <- matrix(NA, length(peak_pos), length(x))
+    for(i in 1:length(peak_pos))
+    {
+      y[i,] <- val$peak_values[[input$select2]][[ i ]]
+    }
+    return(apply(y, 2, sum))
+  }
+  
+  current_model <- function(){
+      sum_of_Peaks(xvalue(), val$peak_height[[input$select2]], 
+                   val$peak_pos[[input$select2]], val$peak_sd[[input$select2]],
+                   val$peak_asym[[input$select2]],
+                   val$peak_type[[input$select2]])
+  }
+  
+  
+  # Which peak positions are available?
+  # Choose from local maxima or second derivative minima, depending on 
+  # the selection
+  pos_to_choose <- function()
+  {
+    if(input$show_local_max)
+    {
+      return( local_max() )
+    }
+    if(input$show_deriv)
+    {
+      return( second_deriv_min() )
+    }
+    if( !input$show_local_max & !input$show_deriv )
+    {
+      return(val$peak_pos[[input$select2]])
+    }
+  }
+  
+  observeEvent(input$click_deconv$x, {
+    req( pos_to_choose() )
+    # determine peak position that is closest to the click:
+    closest <- order( abs(pos_to_choose() - input$click_deconv$x) )[1]
+    closest_peak <- pos_to_choose()[closest]
+    # When closest peak has not been generated before:
+    if( !(closest_peak %in% val$peak_pos[[input$select2]]) )
+    {
+      position_on_list <- length( val$peak_values[[input$select2]] ) + 1
+      val$active_peak[[input$select2]] <- position_on_list
+      
+      if(length(val$peak_pos[[input$select2]]) > 0 )
+      {
+        val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]] ,( yvalue_deconv() - current_model() )[xvalue() == closest_peak ])
+      }else{
+        val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]], yvalue_deconv()[xvalue() == closest_peak ])
+      }
+      val$peak_sd[[input$select2]] <- c(val$peak_sd[[input$select2]], input$SD)
+      val$peak_pos[[input$select2]] <- c(val$peak_pos[[input$select2]], closest_peak)
+      val$peak_asym[[input$select2]] <- c(val$peak_asym[[input$select2]], input$slider4)
+      val$peak_type[[input$select2]] <- c(val$peak_type[[input$select2]], input$peak_model)
+      val$peak_values[[input$select2]][[position_on_list]] <- generate_peak(xvalue(), 
+                                                                            val$peak_height[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                            val$peak_pos[[input$select2]][val$active_peak[[input$select2]] ],
+                                                                            val$peak_sd[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                            val$peak_asym[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                            val$peak_type[[input$select2]][val$active_peak[[input$select2]] ])
+    
+    }else{
+      val$active_peak[[input$select2]] <- which(val$peak_pos[[input$select2]] == closest_peak)
+      updateNumericInput(session, "SD", value = val$peak_sd[[input$select2]][val$active_peak[[input$select2]]])
+      updateNumericInput(session, "height", value = round( val$peak_height[[input$select2]][val$active_peak[[input$select2]]], digits = 2) )
+      updateSliderInput(session, "slider4", value = val$peak_asym[[input$select2]][val$active_peak[[input$select2]]])
+      updateSelectInput(session, "peak_model", selected = val$peak_type[[input$select2]][val$active_peak[[input$select2]]])
+    }
+  })
+  
+  
+      
+ 
+  # update parameters of active peak, when user input changes
+  observeEvent(input$peak_model, {
+    req(val$active_peak[[input$select2]])
+    val$peak_type[[input$select2]][val$active_peak[[input$select2]]] <- input$peak_model
+  })
+  
+  observeEvent(input$SD, {
+    req(val$active_peak[[input$select2]])
+    val$peak_sd[[input$select2]][val$active_peak[[input$select2]]] <- input$SD
+  })
+  
+  observeEvent(input$height, {
+    req(val$active_peak[[input$select2]])
+    val$peak_height[[input$select2]][val$active_peak[[input$select2]]] <- input$height
+  })
+  
+  observeEvent(input$slider4, {
+    req(val$active_peak[[input$select2]])
+    val$peak_asym[[input$select2]][ val$active_peak[[input$select2]] ] <- input$slider4
+  })
+  
+  # update values of peak when parameters change
+  observe({
+    req(val$active_peak[[input$select2]])
+    val$peak_values[[input$select2]][[ val$active_peak[[input$select2]] ]] <- generate_peak(xvalue(), 
+                                                                              val$peak_height[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                              val$peak_pos[[input$select2]][val$active_peak[[input$select2]] ],
+                                                                              val$peak_sd[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                              val$peak_asym[[input$select2]][val$active_peak[[input$select2]] ], 
+                                                                              val$peak_type[[input$select2]][val$active_peak[[input$select2]] ])
+  })
+  
+  observeEvent(input$delete_peak, {
+    val$peak_values[[input$select2]] <- val$peak_values[[input$select2]][-val$active_peak[[input$select2]]]
+    val$peak_pos[[input$select2]] <- val$peak_pos[[input$select2]][-val$active_peak[[input$select2]] ]
+    val$peak_height[[input$select2]] <- val$peak_height[[input$select2]][-val$active_peak[[input$select2]] ]
+    val$peak_sd[[input$select2]] <- val$peak_sd[[input$select2]][-val$active_peak[[input$select2]] ]
+    val$peak_asym[[input$select2]] <- val$peak_asym[[input$select2]][-val$active_peak[[input$select2]] ]
+    val$peak_type[[input$select2]] <- val$peak_type[[input$select2]][-val$active_peak[[input$select2]] ]
+    val$active_peak[[input$select2]] <- NULL
+  })
+  
+  # only 2nd derivative minima or local maxima can be shown
+  observeEvent(input$show_deriv, {
+    if(input$show_deriv)
+    {
+    updateCheckboxInput(session, "show_local_max", value = FALSE)
+    }
+  })
+  
+  observeEvent(input$show_local_max, {
+    if(input$show_local_max)
+    {
+    updateCheckboxInput(session, "show_deriv", value = FALSE)
+    }
+  })
+  
+  
+  # Calculate sum of peak values to quantify peaks
+  observeEvent(input$quantify_peaks,{
+    req(val$active_peak[[input$select2]])
+    curve <- val$peak_values[[input$select2]][[ val$active_peak[[input$select2]]  ]]
+    val$quantified_peaks_area[[input$select_peak]][input$select2] <- sum(curve)
+    # create data frame with quantified peaks containing NAs for files without respective peak
+    areas_with_quant <- names(val$quantified_peaks_area)
+    
+    a <- areas_with_quant[1]
+    df_quant <- data.frame(files = names(val$quantified_peaks_area[[ a ]]), val$quantified_peaks_area[[ a ]])
+    colnames(df_quant)[2] <- a
+    for(a in areas_with_quant[-1])
+    {
+      df_quant_new <- data.frame(files = names(val$quantified_peaks_area[[ a ]]), val$quantified_peaks_area[[ a ]])
+      colnames(df_quant_new)[2] <- a
+      df_quant <- merge(df_quant, df_quant_new, by = "files", all = T)
+    }
+    val$df_quant_peaks <- df_quant
+    
+    # store peak positions of quantified peaks to display them again when the user selects them 
+    val$quantified_peaks_pos[[input$select_peak]][input$select2] <- val$peak_pos[[input$select]]
+  })
+  
+  output$quantification_peaks <- renderTable(
+    val$df_quant_peaks
+  )
+  
+  # download tabel with quantified peaks:
+  output$downloadQuant_peaks <- downloadHandler(
+    filename = "PeakQuant.csv",
+    content = function(file) {
+      write.csv2( val$df_quant_peaks, file, row.names = F)
+    }
+  )
+  
+  # Change active peak when selected from the menu by the user:
+  observeEvent(input$select_peak, {
+    req(val$quantified_peaks_pos[[input$select_peak]][input$select2])
+    val$active_peak[[input$select2]] <- which(val$peak_pos[[input$select2]] == val$quantified_peaks_pos[[input$select_peak]][input$select2]  )
+  })
+  
+  plot_singlePol_deconv <-function(){
+    if(lost_num_pol() == 1 ){
+      ylab <- "UV abs."
+    }else{
+      ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
+    }
+    
+    par(mar = c(5, 5, 0, 2))
+    plot(xvalue(), yvalue_deconv(), type = "l", las = 1,
+         ylab = ylab, xlab = "Time (min)",
+         ylim = c(ymin_d(),ymax_d()), 
+         xlim =c(xmin_d(),xmax_d()), mgp = c(3.5, 0.8, 0),
+         yaxt = "n", xaxt = "n", cex.lab = 1.8
+    )
+    
+    
+    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.75)
+    
+    a <- axTicks(2)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.75)
+  }
+  
+  # add curves of peaks and model:
+  # Plot active peak last
+  plot_peaks <- function(){
+    req(val$peak_pos[[input$select2]])
+    if(length(val$peak_pos[[input$select2]]) > length( val$active_peak[[input$select2]] ) )
+    {
+      # plot inactive peaks
+      inactive_peaks <- which( !( ( 1:length(val$peak_pos[[input$select2]] ) ) %in% val$active_peak[[input$select2]] ) )
+      for(peak in inactive_peaks )
+      {
+        curve <- val$peak_values[[input$select2]][[ peak ]]
+        points(xvalue(), curve,
+               type = "l")
+        polygon( c(xvalue()[1], xvalue(), tail(xvalue(), 1) ), 
+                 c(0, curve, 0), col = rgb(0, 0, 0.9, alpha = 0.5),
+                border = NA)
+      }
+    }
+    
+    if(!is.null(val$active_peak[[input$select2]]))
+    {
+      # plot active peak last
+      peak <- val$active_peak[[input$select2]]
+      curve <- val$peak_values[[input$select2]][[ peak ]]
+      points(xvalue(), curve,
+             type = "l")
+      polygon(c(xvalue()[1], xvalue(), tail(xvalue(), 1) ), 
+              c(0, curve, 0), col = rgb(0, 0.9, 0, alpha = 0.5),
+              border = NA)
+    }
+    
+    points(xvalue(), current_model(), type = "l", 
+           col = "grey3", lwd = 2, lty = 2)
+    
+  }
+  
+  plot_singleInput_deconv <- function(){
+    if(!is.null(xvalue())){
+      if(input$show_deriv & !input$show_local_max)
+      {
+        layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) 
+        plot_2nd_deriv()
+        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = 2 )
+        plot_singlePol_deconv()
+        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = 2 )
+        if(length(val$peak_pos[[input$select2]]) > 0){
+          plot_peaks()
+        }
+        
+      }
+      if(input$show_local_max & !input$show_deriv)
+      {
+        plot_singlePol_deconv()
+        abline( v = local_max(), col = "blue", lty = 2, lwd = 2 )
+        if(length(val$peak_pos[[input$select2]]) > 0){
+          plot_peaks()
+        }
+      }
+      if(!input$show_local_max & !input$show_deriv)
+      {
+        plot_singlePol_deconv()
+        if(length(val$peak_pos[[input$select2]]) > 0){
+          plot_peaks()
+        }
+      }
+    }
+  }
+  
+  show_note <- function(){
+    plot(0,type='n',axes=FALSE,ann=FALSE)
+    legend("topleft", legend = "Please select a baseline for your profile.",
+           bty = "n", cex = 2)
+  }
+  
+  
+  output$plot_deconv <- renderPlot({
+    req(xvalue())
+    if( length(val$baseline[[input$select2]] > 0) )
+    {
+      plot_singleInput_deconv()
+    }else{
+      show_note()
+    }
+  })
+  
+  # Enable download of current plot as pdf
+  
+  output$downloadDeconv <- downloadHandler(
+    filename = function(){ 
+      paste( 
+        sub(pattern = "(.*?)\\..*$", replacement = "\\1", as.character(input$select) ),
+        ".pdf", sep = ""
+      )
+    },
+    content = function(file) {
+      pdf(file, width = 10, height = 6 )
+      print( plot_singleInput_deconv() )
+      dev.off()
+    })  
+  
+  output$test <- renderText(val$active_peak[[input$select2]])
   
 }
 
