@@ -1,6 +1,6 @@
-#QuAPPro
+# QuAPPro
 
-###An R/Shiny web application for Polysome Profile analysis
+### An R/Shiny web application for Polysome Profile analysis
 
 
 
@@ -11,19 +11,19 @@ The **QuAPPro** Shiny web application allows interacive alignment, quantificatio
 
 
 
-# Usage
+## Usage
 
 QuAPPro can be accessed  via ***link*** or can be run locally by downloading the server version of the R code (name of file).
 See the manual (LINK) for details. 
 
-# Example datasets
+## Example datasets
 
 data formats
 
 
-# Remarks
+## Remarks
 
-# Contact
+## Contact
 
 Comments, suggestions and questions are very welcome.
 - Chiara Schiller (LINK MAIL)
