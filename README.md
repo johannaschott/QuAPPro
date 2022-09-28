@@ -1,19 +1,13 @@
----
-title: "QuAPPro"
-subtitle: "An R/Shiny web application for Polysome Profile analysis"
-author: "Chiara Schiller and Johanna Schott"
-output: html_document
----
+#QuAPPro
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+###An R/Shiny web application for Polysome Profile analysis
+
+
+
 
 The **QuAPPro** Shiny web application allows interacive alignment, quantification and visualization of polysome profiles to study the tranlation status of cells. The app is hosted on a web server and is therefore accessible without locally running R. Profile analysis is performed by selecting a desired feature button and thereupon interacting with the visualized profile to individually select anchors, areas or peaks. For higher reproducibility, the user can apply several helper functions while interacting with the plotting area to precisely find i.e., local minima or maxima of the profiles. Besides alignment and quantification, the tool also enables normalization of selected profiles. Generated plots, quantification values or aligned and normalized profile values can be easily downloaded for further usage.
 
-
-IMAGE
-
+![alt text](https://github.com/johannaschott/QuAPPro/blob/main/Figure1.png)
 
 
 
