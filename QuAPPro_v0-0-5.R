@@ -428,7 +428,7 @@ ui <- fluidPage(
     # for user-guided peak-deconvolution
     tabPanel(tags$strong("Deconvolution"), icon = icon("cut"),
              fluidRow(column(2),
-                      column(4, tags$h4(tags$strong("Single profile for de-convolution"))
+                      column(4, tags$h4(tags$strong("Single profile for deconvolution"))
                       ),
                       column(6)
              ),
