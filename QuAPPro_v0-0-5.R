@@ -178,11 +178,13 @@ ui <- fluidPage(
                       # create inputs for user to set x and y axis limits, should start with initially set values before user input 
                       fluidRow( 
                         column(12, tags$h4(tags$strong("Fluorescence profile")))),
+                      fluidRow( 
+                        column(12, tags$h6("Set fluorescence baseline"))),
                       fluidRow(         
                         # show fluorescence signal or not?
                         # set a separate baseline for the fluorescence signal
                         
-                        column(6, style = "padding-top:10px",actionButton("baseline_fl", "Set Fluo. baseline", width = '90%')
+                        column(6, style = "padding-top:10px",actionButton("baseline_fl", "baseline", width = '100%')
                         ),
                         
                         column(6,style = "padding-top:8px",
@@ -254,19 +256,27 @@ ui <- fluidPage(
                       ),
                       
                       fluidRow(
-                        
-                        column(3,style = "padding-top:10px", actionButton("baseline", "Set baseline", width = '100%',
-                                                                          icon = icon("minus-circle"))
+                        column(6,
+                               tags$h6("Set baseline and alignment anchor")
                         ),
-                        column(3,style = "padding-top:10px", actionButton("x_anchor", "Set x-anchor", width = '100%',
-                                                                          icon = icon("anchor"))
+                        column(6,
+                               tags$h6("Set area start and end")
+                        )
+                      ),
+                      
+                      fluidRow(
+                        
+                        column(3,style = "padding-top:10px", actionButton("baseline", "baseline", width = '100%'
+                                                                          )
+                        ),
+                        column(3,style = "padding-top:10px", actionButton("x_anchor", "x-anchor", width = '100%')
                         ),
                         
                         column(3, style = "padding-top:10px",
-                               actionButton("file_start", "Set area start", icon = icon("caret-square-right"), width = '100%')
+                               actionButton("file_start", "start", width = '100%')
                         ),
                         column(3, style = "padding-top:10px",
-                               actionButton("file_end", "Set area end", icon = icon("pause-circle"), width = '100%')
+                               actionButton("file_end", "end", width = '100%')
                         )
                       ),
                       fluidRow(
@@ -293,10 +303,10 @@ ui <- fluidPage(
                                numericInput("axis4", "Set x max", value = NULL, step = 0.1)
                         ),
                         column(3, style = "padding-top:22px",
-                               actionButton("quantify_area", "Quantify area", icon = icon("calculator"), width = '100%')
+                               actionButton("quantify_area", "Quantify", width = '100%')
                         ),
                         column(3, style = "padding-top:22px",
-                               actionButton("take_over_name", "Add name", icon = icon("check-circle"), width = '100%')
+                               actionButton("take_over_name", "Add name", width = '100%')
                         )
                       ),
                       fluidRow(
@@ -356,11 +366,16 @@ ui <- fluidPage(
                       ),
                       
                       fluidRow(
+                        column(12,
+                               tags$h6("Remove and restore profiles from alignment"))
+                      ),
+                      
+                      fluidRow(
                         column(6, 
-                               actionButton("remove_file", "Hide profile", icon = icon("trash"), width = '100%')
+                               actionButton("remove_file", "Hide", icon = icon("trash"), width = '100%')
                         ),
                         column(6, 
-                               actionButton("add_file", "Show profile", icon = icon("trash-restore"), width = '100%')
+                               actionButton("add_file", "Show", icon = icon("trash-restore"), width = '100%')
                         ),
                         style = "padding-right:35px"
                       )
@@ -411,7 +426,7 @@ ui <- fluidPage(
     ),
     # SECOND TAB
     # for user-guided peak-deconvolution
-    tabPanel(tags$strong("De-convolution"), icon = icon("cut"),
+    tabPanel(tags$strong("Deconvolution"), icon = icon("cut"),
              fluidRow(column(2),
                       column(4, tags$h4(tags$strong("Single profile for de-convolution"))
                       ),
@@ -446,7 +461,7 @@ ui <- fluidPage(
                             ),
                             fluidRow(
                               column(12, style = "padding-left:20px",
-                                              tags$h4(tags$strong("De-convolution"))
+                                              tags$h4(tags$strong("Deconvolution"))
                                        )
                             ),
                             fluidRow(
@@ -481,10 +496,9 @@ ui <- fluidPage(
                              )
                            ),
                            fluidRow(
-                             column(6,style = "padding-top:32px", actionButton("delete_peak", "Delete peak", width = '100%',
+                             column(12,style = "padding-top:32px", actionButton("delete_peak", "Delete peak", width = '100%',
                                                                                icon = icon("trash"))
-                                    ),
-                             column(6)
+                                    )
                            )
                       ),
                
@@ -510,7 +524,7 @@ ui <- fluidPage(
                             ),
                             fluidRow(
                               column(12,
-                                     tags$h4(tags$strong("Quantification"))
+                                     tags$h4(tags$strong("Peak quantification"))
                               )
                             ),
                             fluidRow(
@@ -523,10 +537,10 @@ ui <- fluidPage(
                             ),
                             fluidRow(
                               column(6, style = "padding-top:10px",
-                                     actionButton("quantify_peaks", "Quantify peak", icon = icon("calculator"), width = '100%')
+                                     actionButton("quantify_peaks", "Quantify", width = '100%')
                               ),
                               column(6, style = "padding-top:10px",
-                                     actionButton("take_over_peak", "Add name", icon = icon("check-circle"), width = '100%')
+                                     actionButton("take_over_peak", "Add name", width = '100%')
                               )
                             ),
                             fluidRow(
