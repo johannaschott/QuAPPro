@@ -184,7 +184,7 @@ ui <- fluidPage(
                         # show fluorescence signal or not?
                         # set a separate baseline for the fluorescence signal
                         
-                        column(6, style = "padding-top:10px",actionButton("baseline_fl", "baseline", width = '100%')
+                        column(6, style = "padding-top:10px",actionButton("baseline_fl", "Baseline", width = '100%')
                         ),
                         
                         column(6,style = "padding-top:8px",
@@ -266,17 +266,17 @@ ui <- fluidPage(
                       
                       fluidRow(
                         
-                        column(3,style = "padding-top:10px", actionButton("baseline", "baseline", width = '100%'
+                        column(3,style = "padding-top:10px", actionButton("baseline", "Baseline", width = '100%'
                                                                           )
                         ),
-                        column(3,style = "padding-top:10px", actionButton("x_anchor", "x-anchor", width = '100%')
+                        column(3,style = "padding-top:10px", actionButton("x_anchor", "X-anchor", width = '100%')
                         ),
                         
                         column(3, style = "padding-top:10px",
-                               actionButton("file_start", "start", width = '100%')
+                               actionButton("file_start", "Start", width = '100%')
                         ),
                         column(3, style = "padding-top:10px",
-                               actionButton("file_end", "end", width = '100%')
+                               actionButton("file_end", "End", width = '100%')
                         )
                       ),
                       fluidRow(
