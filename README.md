@@ -14,8 +14,8 @@ The **QuAPPro** Shiny web application allows interacive alignment, quantificatio
 
 ## Usage
 
-QuAPPro can be accessed  via ***link*** or can be run locally by downloading and running the provided server version of the R code.
-See the manual in the app or [here](https://github.com/johannaschott/QuAPPro/blob/main/QuAPPro_manual_v0-0-5.Rmd) for details. 
+QuAPPro as online app in your browser can be accessed [here](https://www.umm.uni-heidelberg.de/biochemie/shiny/) or can be run locally by downloading and running the provided server version of the R code.
+See the manual in the online app or [here](https://github.com/johannaschott/QuAPPro/blob/main/QuAPPro_manual_v0-0-5.Rmd) for details. 
 
 
 ## Example datasets
