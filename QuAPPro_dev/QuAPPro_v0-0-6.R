@@ -20,6 +20,7 @@ library(plyr)
 library(colorspace)
 library(markdown)
 library(emg)
+library(DT)
 
 
 # FUNCTIONS:
@@ -174,7 +175,7 @@ ui <- fluidPage(
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
-    tabPanel(tags$strong("Profile Analysis"), icon = icon("chart-area"), # updated to newer version
+    tabPanel(tags$strong("Alignments/Areas"), icon = icon("anchor"), # updated to newer version
              fluidRow(column(2),
                       column(4, tags$h4(tags$strong("Single profiles for quantification")
                       )),
@@ -576,26 +577,31 @@ ui <- fluidPage(
              )
     ),
     # THIRD TAB
-    # shows updating table of quantified areas for respective plots, download possible 
-    tabPanel(tags$strong("Quantification summary"), icon = icon("list-alt"), 
-             column(6,
-                    tags$h4("Table of quantified areas"),
-                    tableOutput("quantification"),
-                    downloadButton("downloadQuant", "Download .csv file")
-             ),
-             column(6,
-                    tags$h4("Table of quantified peaks"),
-                    tableOutput("quantification_peaks"),
-                    downloadButton("downloadQuant_peaks", "Download .csv file")
-             )
-    ),
-    # FOURTH TAB
     # shows updating table of aligned (and normalized) profiles, download possible 
     tabPanel(tags$strong("Alignment table"), icon = icon("table"), 
              tags$h4("Table of all aligned (and normalized) profiles"),
              downloadButton("downloadData", "Download .csv file"),
              tableOutput("csv_file")),
-    # FIFTH TAB 
+    # FOURTH TAB
+    # shows updating table of quantified areas for respective plots, download possible 
+    tabPanel(tags$strong("Quantification summary"), icon = icon("list-alt"), 
+             fluidRow(
+               column(10,
+                      tags$h4("Table of quantified areas or peaks"),
+                      tableOutput("quantification"),
+                      downloadButton("downloadQuant", "Download .csv file")
+               ),
+               column(2, style = "padding-top:20px", 
+                      actionButton("to_stats", "Transfer to Stats", width = '80%', icon = icon("chart-column") )
+               )
+             )
+    ),
+    # FIFTH TAB
+    # for performing beta regression on replicates
+    tabPanel(tags$strong("Statistics"), icon = icon("chart-column"), 
+             tableOutput("stats_tab")
+             ),
+    # SIXTH TAB 
     # shows Rmd manual  
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
              fluidRow(
@@ -1014,6 +1020,7 @@ server <- function(input, output, session) {
   })
   
   # Calculate sum of yvalues to quantify areas when button is pressed and required values were set before
+  # Calculate sum of yvalues to quantify areas when button is pressed and required values were set before
   observeEvent(input$quantify_area,{
     req(val$file_starts[[input$select]], val$file_ends[[input$select]], val$baseline[input$select])
     
@@ -1033,7 +1040,16 @@ server <- function(input, output, session) {
     if(input$show_fl){
       val$sum_areas[[paste(input$select_area, "_fluo", sep = "")]][input$select] <- (sum(fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline_fl[input$select]))
     }
-    # create data frame with quantified areas containing NAs for files without respective area
+    
+    # store not only area but also start and stop values in the same ways as areas!
+    val$area_starts[[input$select_area]][input$select] <- val$file_starts[[input$select]]
+    val$area_ends[[input$select_area]][input$select] <- val$file_ends[[input$select]]
+  })
+  #select_area
+  
+  
+  # create data frame with quantified areas containing NAs for files without respective area
+  observeEvent(val$sum_areas, {
     areas_with_quant <- names(val$sum_areas)
     
     a <- areas_with_quant[1]
@@ -1046,12 +1062,9 @@ server <- function(input, output, session) {
       df_quant <- merge(df_quant, df_quant_new, by = "files", all = T)
     }
     val$df_quant <- df_quant
-    
-    # store not only area but also start and stop values in the same ways as areas!
-    val$area_starts[[input$select_area]][input$select] <- val$file_starts[[input$select]]
-    val$area_ends[[input$select_area]][input$select] <- val$file_ends[[input$select]]
   })
-  #select_area
+  
+  
   
   # create "remove vector" containing files selected by remove button. Only take files into the vector that are not already there
   observeEvent(input$remove_file,{
@@ -2154,36 +2167,11 @@ server <- function(input, output, session) {
   observeEvent(input$quantify_peaks,{
     req(val$active_peak[[input$select2]])
     curve <- val$peak_values[[input$select2]][[ val$active_peak[[input$select2]]  ]]
-    val$quantified_peaks_area[[input$select_peak]][input$select2] <- sum(curve)
-    # create data frame with quantified peaks containing NAs for files without respective peak
-    areas_with_quant <- names(val$quantified_peaks_area)
-    
-    a <- areas_with_quant[1]
-    df_quant <- data.frame(files = names(val$quantified_peaks_area[[ a ]]), val$quantified_peaks_area[[ a ]])
-    colnames(df_quant)[2] <- a
-    for(a in areas_with_quant[-1])
-    {
-      df_quant_new <- data.frame(files = names(val$quantified_peaks_area[[ a ]]), val$quantified_peaks_area[[ a ]])
-      colnames(df_quant_new)[2] <- a
-      df_quant <- merge(df_quant, df_quant_new, by = "files", all = T)
-    }
-    val$df_quant_peaks <- df_quant
-    
+    val$sum_areas[[input$select_peak]][input$select2] <- sum(curve)
     # store peak positions of quantified peaks to display them again when the user selects them 
     val$quantified_peaks_pos[[input$select_peak]][input$select2] <- val$peak_pos[[input$select]]
   })
   
-  output$quantification_peaks <- renderTable(
-    val$df_quant_peaks
-  )
-  
-  # download tabel with quantified peaks:
-  output$downloadQuant_peaks <- downloadHandler(
-    filename = "PeakQuant.csv",
-    content = function(file) {
-      write.csv2( val$df_quant_peaks, file, row.names = F)
-    }
-  )
   
   # Change active peak when selected from the menu by the user:
   observeEvent(input$select_peak, {
@@ -2317,6 +2305,20 @@ server <- function(input, output, session) {
     })  
   
   output$test <- renderText(val$active_peak[[input$select2]])
+  
+  # Transfer quantification to statistics panel:
+  observeEvent(input$to_stats,{
+    File <- rep(val$df_quant[,1], dim(val$df_quant)[2] - 1)
+    Region <- rep(colnames(val$df_quant)[-1], each = dim(val$df_quant)[1] )
+    Values <- unlist( val$df_quant[,-1] )
+    Proportions <- unlist( val$df_quant[,-1]/ val$df_quant[,"Total"] )
+    val$stats_tab <- cbind(File, Region, Values, Proportions)
+    })
+  
+  # create output table showing data for statistics
+  output$stats_tab <- renderTable(
+    val$stats_tab
+  )
   
 }
 
