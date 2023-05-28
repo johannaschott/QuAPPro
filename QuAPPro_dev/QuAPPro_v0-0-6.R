@@ -8,6 +8,7 @@
 #                                                   #                                                
 #####################################################                                                 
 
+# Current problems: FLuorescence values not correct, de-convolution not re-loaded upon import
 
 # LOAD REQUIRED PACKAGES:
 
@@ -24,6 +25,10 @@ library(DT)
 
 
 # FUNCTIONS:
+
+render_dt = function(data, editable = 'cell', server = TRUE, ...) {
+  renderDT(data, selection = 'none', server = server, editable = editable, ...)
+}
 
 # Find closest point in a two-dimensional coordinate system:
 
@@ -170,12 +175,12 @@ ui <- fluidPage(
            left: calc(50%);
            }
            ")
-      )
-      ),
+    )
+  ),
   # create fluid layout with several tabs for displaying outputs
   tabsetPanel(
     # FIRST TAB
-    tabPanel(tags$strong("Alignments/Areas"), icon = icon("anchor"), # updated to newer version
+    tabPanel(tags$strong("Alignments/Areas"), icon = icon("chart-area"), # updated to newer version
              fluidRow(column(2),
                       column(4, tags$h4(tags$strong("Single profiles for quantification")
                       )),
@@ -184,7 +189,7 @@ ui <- fluidPage(
              fluidRow(
                column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload pks, txt or csv file", multiple = T, accept = c(".pks",".csv", ".txt")),
+                      fileInput("input_data", "Upload polysome profile or previous analysis", multiple = T, accept = c(".pks",".csv", ".txt", ".RData")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -224,6 +229,7 @@ ui <- fluidPage(
                       
                ),
                column(4, style = "padding-top:22px",
+                      textOutput("test"),
                       plotOutput("plot_single", click = "click")
                ),
                column(4, style = "padding-top:22px",
@@ -436,7 +442,10 @@ ui <- fluidPage(
                       downloadButton("downloadPlot", "Download plot", icon = icon("file-download"), width = '100%'),
                       checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
                       checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL))
+                      checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
+                      downloadButton("export", "Export analysis", width = "100%")
+                  
+               )
              )
              
     ),
@@ -526,7 +535,6 @@ ui <- fluidPage(
                ),
                
                column(8, style = "padding-top:22px", 
-                      textOutput("test"),
                       plotOutput("plot_deconv", click = "click_deconv", height = 700)
                ),
                
@@ -592,15 +600,31 @@ ui <- fluidPage(
                       downloadButton("downloadQuant", "Download .csv file")
                ),
                column(2, style = "padding-top:20px", 
-                      actionButton("to_stats", "Transfer to Stats", width = '80%', icon = icon("chart-column") )
+                      actionButton("to_stats", "Transfer to Stats", width = '80%', icon = icon("chart-line") )
                )
              )
     ),
     # FIFTH TAB
     # for performing beta regression on replicates
-    tabPanel(tags$strong("Statistics"), icon = icon("chart-column"), 
-             tableOutput("stats_tab")
+    tabPanel(tags$strong("Statistics"), icon = icon("chart-line"), 
+             fluidRow(
+               column(4, style = "padding-top:10px",
+                      selectInput("select_region", "Area or peak", choices = c(), width = '80%')
+               ),
+               column(8, style = "padding-top:10px",
+                      tableOutput("stats_tab") 
+               )
              ),
+             fluidRow(
+               column(4,
+                      fluidRow( column(12, DTOutput("files_conditions") ) ),
+                      fluidRow(
+                        column(12, actionButton("add_variable", "Add column", width = "20%", icon = icon("plus") ) )
+                      )
+                      
+               )
+             )
+    ),
     # SIXTH TAB 
     # shows Rmd manual  
     tabPanel(tags$strong("QuAPPro manual"), icon = icon("question-circle"),
@@ -649,100 +673,125 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
+  options(shiny.maxRequestSize = 50 * 1024^2)
+  
   ### REACTIVE VALUES FOR LISTS BUILT ALONG THE SESSION
   # create reactive values for collecting values in a list/vector/data.frame
   val <- reactiveValues(
-    paths_collected = vector()
+    paths_collected = vector(),
+    colors_collected = list(),
+    color_vector = vector(),
+    linetype_collected = list(),
+    linewidth_collected = list(),
+    file_starts = list(),
+    file_ends = list(),
+    sum_areas = list(),
+    sum_additive_areas = list(),
+    file_starts_add = list(),
+    file_ends_add = list(),
+    files_to_align = vector(),
+    files_to_plot = vector(),
+    remove_files_list = vector(),
+    csv_file_df = data.frame(),
+    df_quant = data.frame(),
+    factors_list = list(),
+    control_baseline = list(),
+    fl_control_baseline = list(),
+    file_types = vector(),
+    xmin_collected = list(),
+    xmax_collected = list(),
+    ymin_collected = list(),
+    ymax_collected = list(),
+    ymin_collected_fl = list(),
+    ymax_collected_fl = list(),
+    polysome_data = list(),
+    files_list = list(),
+    peak_list = vector(),
+    align_files_list = vector(),
+    area_list = vector()
+    
   )
-  val <- reactiveValues(
-    colors_collected = list()
-  )
-  val <- reactiveValues(
-    color_vector = vector()
-  )
-  val <- reactiveValues(
-    linetype_collected = list()
-  )
-  val <- reactiveValues(
-    linewidth_collected = list()
-  )
-  val <- reactiveValues(
-    file_starts = list()
-  )
-  val <- reactiveValues(
-    file_ends = list()
-  )
-  val <- reactiveValues(
-    sum_areas = list()
-  )
-  val <- reactiveValues(
-    sum_additive_areas = list()
-  )
-  val <- reactiveValues(
-    file_starts_add = list()
-  )
-  val <- reactiveValues(
-    file_ends_add = list()
-  )
-  val <- reactiveValues(
-    files_to_align = vector()
-  )
-  
-  val <- reactiveValues(
-    files_to_plot = vector()
-  )
-  val <- reactiveValues(
-    remove_files_list = vector()
-  )
-  val <- reactiveValues(
-    csv_file_df = data.frame()
-  )
-  val <- reactiveValues(
-    df_quant = data.frame()
-  )
-  val <- reactiveValues(
-    factors_list = list()
-  )
-  val <- reactiveValues(
-    control_baseline = list()
-  )
-  val <- reactiveValues(
-    fl_control_baseline = list()
-  )
-  
-  val <- reactiveValues(
-    file_types = vector()
-  )
-  
-  val <- reactiveValues(
-    xmin_collected = list()
-  )
-  val <- reactiveValues(
-    xmax_collected = list()
-  )
-  val <- reactiveValues(
-    ymin_collected = list()
-  )
-  val <- reactiveValues(
-    ymax_collected = list()
-  )
-  val <- reactiveValues(
-    ymin_collected_fl = list()
-  )
-  val <- reactiveValues(
-    ymax_collected_fl = list()
-  )
-  
   
   
   
   ### INITIAL LOADED FILES
   # update select output field with the name of every newly loaded file
-  observe({
-    session$userData$files_list <- c(input$input_data$name[input$input_data$size != 0], session$userData$files_list)
-    updateSelectInput(session, "select",
-                      choices = session$userData$files_list)
+  observeEvent(input$input_data, {
+    
+    if(grepl("RData", input$input_data$name ) )
+      
+    {
+      load(input$input_data$datapath)
+      for(i in names(forExport))
+      {
+        val[[ i ]] <- forExport[[i]]
+      }
+      updateSelectInput(session, "select",
+                        choices = val$files_list)
+      updateSelectInput(session, "select2",
+                        choices = val$files_list)
+    }else{
+    
+      val$paths_collected[input$input_data$name] <- input$input_data$datapath
+      val$files_list <- c(input$input_data$name[input$input_data$size != 0], val$files_list)
+      
+      updateSelectInput(session, "select",
+                        choices = val$files_list)
+      
+      updateSelectInput(session, "select2",
+                        choices = val$files_list)
+      
+      new_names <- input$input_data$name
+      new_paths <- input$input_data$datapath
+      
+      for(i in 1:length(new_names))
+      {
+        this_name <- new_names[i]
+        this_path <- new_paths[i]
+        
+        if( grepl(".pks",as.character(this_name) ) ){
+          val$factors_list[[this_name]] <- (0.1/60)
+          val$file_types[this_name] <- "pks"
+          data <- read.table(this_path, dec = ",", header = F) 
+          val$polysome_data[[this_name]] <- data[,3]
+          val$xvalues[[this_name]] <- (data[ ,1]+1)*val$factors_list[[this_name]]
+        }
+        
+        if( grepl(".csv",as.character(this_name) )  ){
+          start <- grep("Data Columns:", readLines(this_path))
+          data <- read.csv(this_path, skip = start)
+          
+          if( "SampleFluor" %in% colnames(data) )
+          {
+            val$factors_list[[this_name]] <- (0.32/60)
+            val$file_types[this_name] <- "csv_fluo" 
+            val$polysome_data[[this_name]] <- data[ ,5]
+            val$fluo_data[[this_name]] <- data$SampleFluor
+            val$xvalues[[this_name]] <- (1:length(data[ ,4]))*val$factors_list[[this_name]]
+          }
+          
+          if(!"SampleFluor" %in% colnames(data) )
+          {
+            val$factors_list[[this_name]] <- (0.2/60)
+            val$file_types[this_name] <- "csv" 
+            val$polysome_data[[this_name]] <- data[ ,5]
+            val$xvalues[[this_name]] <- (1:length(data[ ,5]))*val$factors_list[[this_name]]
+          }
+        }
+        
+        if( grepl(".txt",as.character(this_name) ) ){
+          val$factors_list[[this_name]] <- (0.1/60)
+          val$file_types[this_name] <- "pks"
+          data <- read.delim(this_path)[,2]
+          val$polysome_data[[this_name]] <- data[,2]
+          val$xvalues[[this_name]] <-  (data[ ,1]+1)*val$factors_list[[this_name]]
+        }
+        
+      }
+    }
   })
+  
+  output$test <- renderText(input$input_data$name)
   
   # notification if empty file is loaded
   observeEvent(input$input_data,{
@@ -756,74 +805,13 @@ server <- function(input, output, session) {
     }
   })
   
-  observe({
-    req(input$select)
-    
-    if((grepl(".pks",as.character(input$select)) == T)){
-      val$factors_list[[input$select]] <- (0.1/60)
-      val$file_types[input$select] <- "pks"
-    }else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-      val$factors_list[[input$select]] <- (0.32/60)
-      val$file_types[input$select] <- "csv_fluo" 
-    }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
-      val$factors_list[[input$select]] <- (0.2/60)
-      val$file_types[input$select] <- "csv" 
-      print(val$factors_list[[input$select]])
-    }else if((grepl(".txt",as.character(input$select)) == T)){
-      val$factors_list[[input$select]] <- (0.1/60)
-      val$file_types[input$select] <- "pks"
-    }
-  })
-  # when an input file is selected store the path to the selected file name as current_path
-  current_path <- reactive({
-    val$paths_collected[input$input_data$name] <- input$input_data$datapath
-    val$paths_collected[input$select]
-  })
   
-  # read selected datapath from the current selected file (input$select) for input data storage
-  file_plot <- reactive({
-    #require that the input is available
-    req(input$select) 
-    if(grepl(".pks",as.character(input$select)) == T){
-      read.table(current_path(), dec = ",", header = F)
-    }else if(grepl(".csv",as.character(input$select)) == T){
-      start <- grep("Data Columns:", readLines(current_path()))
-      read.csv(current_path(), skip = start)
-    }else if(grepl(".txt",as.character(input$select)) == T){
-      read.delim(current_path())}
-  })
-  
-  # Setting y and x column values for plotting from the loaded dataset
-  yvalue <- reactive({
-    req(input$select) 
-    
-    if((grepl(".pks",as.character(input$select)) == T)){
-      file_plot()[ ,3]}else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-        file_plot()[ ,5]}else if((grepl(".csv",as.character(input$select)) == T) & (ncol(file_plot()) == 4)){
-          head(file_plot()[,2], -1)
-        }else if((grepl(".txt",as.character(input$select)) == T)){
-          file_plot()[ ,2]
-        }
-  })
   
   fluorescence <- reactive({
     req(input$select) 
     req(input$show_fl)
-    if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-      smooth_profile( file_plot()[ ,3], input$slider1 )}
-    
-  })
-  
-  xvalue <- reactive({
-    req(input$select) 
-    if(grepl(".pks",as.character(input$select)) == T){
-      (file_plot()[ ,1]+1)*val$factors_list[[input$select]]}else if((grepl(".csv",as.character(input$select)) == T) & ("SampleFluor" %in% colnames(file_plot()))){
-        (1:length((file_plot()[ ,4])))*val$factors_list[[input$select]]
-      }else if((grepl(".csv",as.character(input$select)) == T) & !("SampleFluor" %in% colnames(file_plot()))){
-        (head(1:length(file_plot()[,1]),-1))*val$factors_list[[input$select]]
-      }else if((grepl(".txt",as.character(input$select)) == T)){
-        (file_plot()[ ,1]+1)*val$factors_list[[input$select]]
-      }
+    if( val$file_types[[input$select]] == "csv_fluo" ){
+      smooth_profile( val$fluo_data[[input$select]], input$slider1 )}
     
   })
   
@@ -841,7 +829,7 @@ server <- function(input, output, session) {
   })
   
   lost_num_pol <- reactive({
-    max_numeral <- max( floor(log10(abs( yvalue() ))) + 1 ) # how many numerals has the maximum UV absorption?
+    max_numeral <- max( floor(log10(abs( val$polysome_data[[input$select]] ))) + 1 ) # how many numerals has the maximum UV absorption?
     
     if(max_numeral > 2 ){
       10^(max_numeral - 2)
@@ -869,7 +857,7 @@ server <- function(input, output, session) {
     if(isTruthy(val$ymax_collected[[input$select]])){
       val$ymax_collected[[input$select]]*lost_num_pol()
     }else{
-      max(yvalue())
+      max(val$polysome_data[[input$select]])
     }})
   
   ymax_single_fl <- reactive({
@@ -891,7 +879,7 @@ server <- function(input, output, session) {
     if(isTruthy(val$xmax_collected[[input$select]])){
       val$xmax_collected[[input$select]]
     }else{
-      max(xvalue())
+      max(val$xvalues[[input$select]])
     }})
   
   #### ALIGNMENT:
@@ -921,48 +909,48 @@ server <- function(input, output, session) {
     # setting profile start
     if(val$buttons == 4)
       if(input$helper_functions == "peak_help"){
-        val$file_starts[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), NULL),
+        val$file_starts[[input$select]] <- (find_closest_minmax(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                                 (closest_point(input$click$x, 
                                                                                input$click$y, 
-                                                                               xvalue(),
-                                                                               yvalue()))/val$factors_list[[input$select]], 5))
+                                                                               val$xvalues[[input$select]],
+                                                                               val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$file_starts[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
+        val$file_starts[[input$select]] <- (find_closest_inflections(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                                      (closest_point(input$click$x, 
                                                                                     input$click$y, 
-                                                                                    xvalue(),
-                                                                                    yvalue()))/val$factors_list[[input$select]], 5))
+                                                                                    val$xvalues[[input$select]],
+                                                                                    val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else{
         val$file_starts[[input$select]] <-(closest_point(input$click$x,
                                                          input$click$y,
-                                                         xvalue(),
-                                                         yvalue())/val$factors_list[[input$select]])
+                                                         val$xvalues[[input$select]],
+                                                         val$polysome_data[[input$select]])/val$factors_list[[input$select]])
       }
     # setting profile ends
     if(val$buttons == 5)
       if(input$helper_functions == "peak_help"){
-        val$file_ends[[input$select]] <- (find_closest_minmax(smooth_profile(yvalue(), NULL),
+        val$file_ends[[input$select]] <- (find_closest_minmax(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
-                                                                             xvalue(),
-                                                                             yvalue()))/val$factors_list[[input$select]], 5))
+                                                                             val$xvalues[[input$select]],
+                                                                             val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$file_ends[[input$select]] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
+        val$file_ends[[input$select]] <- (find_closest_inflections(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                                    (closest_point(input$click$x, 
                                                                                   input$click$y, 
-                                                                                  xvalue(),
-                                                                                  yvalue()))/val$factors_list[[input$select]], 5))
+                                                                                  val$xvalues[[input$select]],
+                                                                                  val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else{
         val$file_ends[[input$select]] <-(closest_point(input$click$x,
                                                        input$click$y,
-                                                       xvalue(),
-                                                       yvalue())/val$factors_list[[input$select]])
+                                                       val$xvalues[[input$select]],
+                                                       val$polysome_data[[input$select]])/val$factors_list[[input$select]])
       }
     # setting baseline for polysome profile
     if(val$buttons == 2){
-      val$baseline[input$select] <- yvalue()[(input$click$x)/val$factors_list[[input$select]]]
+      val$baseline[input$select] <- val$polysome_data[[input$select]][(input$click$x)/val$factors_list[[input$select]]]
     }
     
     # setting baseline for fluorescence profile
@@ -974,40 +962,40 @@ server <- function(input, output, session) {
     # setting x-anchor
     if(val$buttons == 1)
       if(input$helper_functions == "peak_help"){
-        val$anchor[input$select] <- round(find_closest_minmax(smooth_profile(yvalue(), NULL),
+        val$anchor[input$select] <- round(find_closest_minmax(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
-                                                                             xvalue(),
-                                                                             yvalue()))/val$factors_list[[input$select]], 5))
+                                                                             val$xvalues[[input$select]],
+                                                                             val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else if(input$helper_functions == "inflection_help"){
         
-        val$anchor[input$select] <- (find_closest_inflections(smooth_profile(yvalue(), NULL),
+        val$anchor[input$select] <- (find_closest_inflections(smooth_profile(val$polysome_data[[input$select]], NULL),
                                                               (closest_point(input$click$x, 
                                                                              input$click$y, 
-                                                                             xvalue(),
-                                                                             yvalue()))/val$factors_list[[input$select]], 5))
+                                                                             val$xvalues[[input$select]],
+                                                                             val$polysome_data[[input$select]]))/val$factors_list[[input$select]], 5))
       }else{
         val$anchor[input$select] <-(closest_point(input$click$x,
                                                   input$click$y,
-                                                  xvalue(),
-                                                  yvalue())/val$factors_list[[input$select]])
+                                                  val$xvalues[[input$select]],
+                                                  val$polysome_data[[input$select]])/val$factors_list[[input$select]])
       }
     
     # if both, anchor and baseline, exist for one plot, select_alignment button gets updated with this file
-    session$userData$align_files_list <- c((intersect(names(val$baseline),
+    val$align_files_list <- c((intersect(names(val$baseline),
                                                       names(val$anchor))),
-                                           session$userData$align_files_list)
+                                           val$align_files_list)
     updateSelectInput(session, "select_alignment",
-                      choices = session$userData$align_files_list)
+                      choices = val$align_files_list)
     # reactive vector with respective file names gets updated
     val$files_to_align <- intersect(names(val$baseline), names(val$anchor))
   })
   
   # update choices of areas to be quantified with names given by the user
   observeEvent(input$take_over_name,{
-    session$userData$area_list <- c(input$name_area, session$userData$area_list)
+    val$area_list <- c(input$name_area, val$area_list)
     updateSelectInput(session, "select_area",
-                      choices = c(session$userData$area_list, "Total", "Monosomes", "Polysomes", "40S", "60S"))
+                      choices = c(val$area_list, "Total", "Monosomes", "Polysomes", "40S", "60S"))
   })
   
   # show notification if one of the 3 required values is missing for area quantification, but quantify button is pressed
@@ -1035,10 +1023,10 @@ server <- function(input, output, session) {
     x_last <- round(val$file_ends[[input$select]])*val$factors_list[[input$select]]
     # sum up all values from start to end area and subtract baseline, assign area name selected by user
     # store in list of areas including quantification with respective file name
-    val$sum_areas[[input$select_area]][input$select] <- (sum(yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline[input$select]))
+    val$sum_areas[[input$select_area]][input$select] <- (sum(val$polysome_data[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))]-val$baseline[input$select]))
     
     if(input$show_fl){
-      val$sum_areas[[paste(input$select_area, "_fluo", sep = "")]][input$select] <- (sum(fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))]-val$baseline_fl[input$select]))
+      val$sum_areas[[paste(input$select_area, "_fluo", sep = "")]][input$select] <- (sum(fluorescence()[(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))]-val$baseline_fl[input$select]))
     }
     
     # store not only area but also start and stop values in the same ways as areas!
@@ -1053,13 +1041,13 @@ server <- function(input, output, session) {
     areas_with_quant <- names(val$sum_areas)
     
     a <- areas_with_quant[1]
-    df_quant <- data.frame(files = names(val$sum_areas[[ a ]]), val$sum_areas[[ a ]])
+    df_quant <- data.frame(File = names(val$sum_areas[[ a ]]), val$sum_areas[[ a ]])
     colnames(df_quant)[2] <- a
     for(a in areas_with_quant[-1])
     {
-      df_quant_new <- data.frame(files = names(val$sum_areas[[ a ]]), val$sum_areas[[ a ]])
+      df_quant_new <- data.frame(File = names(val$sum_areas[[ a ]]), val$sum_areas[[ a ]])
       colnames(df_quant_new)[2] <- a
-      df_quant <- merge(df_quant, df_quant_new, by = "files", all = T)
+      df_quant <- merge(df_quant, df_quant_new, by = "File", all = T)
     }
     val$df_quant <- df_quant
   })
@@ -1156,7 +1144,7 @@ server <- function(input, output, session) {
   # show_fl is deselected when a new file is selected that does not contain fluorescence
   # no warning or error is shown
   observeEvent(input$select,{
-    if(input$show_fl && !("SampleFluor" %in% colnames(file_plot()))){
+    if(input$show_fl && val$file_types[input$select] != "csv_fluo"){
       updateCheckboxInput(session, "show_fl", value = FALSE)
     }
   })
@@ -1170,7 +1158,8 @@ server <- function(input, output, session) {
   
   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
   observeEvent(input$show_fl,{
-    if(!("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
+    req(input$select)
+    if( val$file_types[input$select] != "csv_fluo" & input$show_fl){
       showNotification("Your file does not contain a fluorescence signal (column 'SampleFluor').",
                        duration = NULL, type = "error")
       updateCheckboxInput(session, "show_fl", value = FALSE)
@@ -1179,7 +1168,8 @@ server <- function(input, output, session) {
   
   # let axis limits update for fluorescence axis
   observe({
-    if(("SampleFluor" %in% colnames(file_plot())) & input$show_fl){
+    req(input$select)
+    if( val$file_types[input$select] != "csv_fluo" & input$show_fl){
       updateNumericInput(session, "axis1_fl", value = round( ymin_single_fl()/lost_num_fl(), digits = 2 ) )
       updateNumericInput(session, "axis2_fl", value = round( ymax_single_fl()/lost_num_fl(), digits = 2 ) )
     }else{
@@ -1245,7 +1235,7 @@ server <- function(input, output, session) {
       ylab <- paste("Fluo. (x ", lost_num_fl(), ")", sep = "")
     }
     
-    plot(xvalue(), fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = 2,
+    plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = 2,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
          las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.6)
     a <- axTicks(2)
@@ -1259,8 +1249,8 @@ server <- function(input, output, session) {
       # quantified area is colored in green. If baseline, area_end or area_satrt lines are changed, the colored area stays the same for the selected quantified area 
       # until the button "quantify area" is pressed again.
       if(isTruthy(val$fl_control_baseline[[input$select_area]][input$select])){
-        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
+        polygon(c(x_first, val$xvalues[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], x_last),
+                c(val$fl_control_baseline[[input$select_area]][input$select], fluorescence()[(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], val$fl_control_baseline[[input$select_area]][input$select]),
                 col = "#c7e9c0", border = "darkgreen", lwd = 2)
       }
     }
@@ -1280,7 +1270,7 @@ server <- function(input, output, session) {
       ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
     }
     
-    plot(xvalue(), yvalue(), type = "l", las = 1, lwd = 2,
+    plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = 2,
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()), mgp = c(3.5, 0.8, 0),
@@ -1299,8 +1289,8 @@ server <- function(input, output, session) {
       x_last <- round(val$area_ends[[input$select_area]][input$select])*val$factors_list[[input$select]]
       
       if(isTruthy(val$control_baseline[[input$select_area]][input$select])){
-        polygon(c(x_first, xvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], x_last),
-                c(val$control_baseline[[input$select_area]][input$select], yvalue()[(which(xvalue() == (x_first))):(which(xvalue() == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
+        polygon(c(x_first, val$xvalues[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], x_last),
+                c(val$control_baseline[[input$select_area]][input$select], val$polysome_data[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
                 col = "#c7e9c0", border = "black", lwd = 2)
       }
     }
@@ -1319,8 +1309,8 @@ server <- function(input, output, session) {
   
   
   plot_singleInput <- function(){
-    if(!is.null(xvalue())){
-      if(input$show_fl && ("SampleFluor" %in% colnames(file_plot()))){
+    if(!is.null(val$xvalues[[input$select]])){
+      if(input$show_fl && val$file_types[input$select] == "csv_fluo" ){
         if(val$buttons == 6){
           layout(matrix(2:1, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
           par(mar = c(5, 5, 0, 2))
@@ -1477,8 +1467,7 @@ server <- function(input, output, session) {
       dummy <- list()
       for(f in names(val$baseline_fl)) # only go through fluorescence signals with baseline
       {
-        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
-        fluo <- read.csv(val$paths_collected[f], skip = start)$SampleFluor
+        fluo <- val$fluo_data[[f]]
         dummy[[f]] <- smooth_profile( ( ( fluo - val$baseline_fl[[f]] )/norm_factor()[f])*norm_factor_x()[f], input$slider1)
       }
       dummy
@@ -1492,18 +1481,7 @@ server <- function(input, output, session) {
     dummy <- list()
     for(f in val$files_to_plot)
     {
-      if(val$factors_list[[f]] == (0.1/60) & grepl(".pks",as.character(f))){
-        next_y <- read.table(val$paths_collected[f], dec = ",", header = F)$V3
-      }else if(val$factors_list[[f]] == (4.8/15)/60){
-        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
-        next_y <- read.csv(val$paths_collected[f], skip = start)$AbsA
-      }else if(val$factors_list[[f]] == (0.2)/60){
-        start <- grep("Data Columns:", readLines(val$paths_collected[f]))
-        next_y <- head(read.csv(val$paths_collected[f], skip = start)$Absorbance, -1)
-      }else if(val$factors_list[[f]] == (0.1/60) & grepl(".txt",as.character(f))){
-        next_y <- read.delim(val$paths_collected[f])[,2]
-      }
-      
+      next_y <- val$polysome_data[[f]]
       dummy[[f]] <- ( ( next_y - val$baseline[f])/norm_factor()[f])*norm_factor_x()[f]
     }
     dummy
@@ -1870,14 +1848,8 @@ server <- function(input, output, session) {
   ### Peak de-convolution:
   yvalue_deconv <- function()
   {
-    yvalue() - val$baseline[input$select2]
+    val$polysome_data[[input$select2]] - val$baseline[input$select2]
   }
-  
-  observe({
-    session$userData$files_list <- c(input$input_data$name[input$input_data$size != 0], session$userData$files_list)
-    updateSelectInput(session, "select2",
-                      choices = session$userData$files_list)
-  })
   
   observeEvent(input$select2, {
     updateSelectInput(session, "select", selected = input$select2)
@@ -1889,9 +1861,9 @@ server <- function(input, output, session) {
   
   # update choices of peaks to be quantified with names given by the user
   observeEvent(input$take_over_peak,{
-    session$userData$peak_list <- c(input$name_peak, session$userData$peak_list)
+    val$peak_list <- c(input$name_peak, val$peak_list)
     updateSelectInput(session, "select_peak",
-                      choices = c(session$userData$peak_list, "40S", "60S", "Monosomes", "Halfmers"))
+                      choices = c(val$peak_list, "40S", "60S", "80S", "Halfmers"))
   })
   
   second_deriv_smoothed <- function()
@@ -1902,7 +1874,7 @@ server <- function(input, output, session) {
   second_deriv_min <- function()
   {
     resolution <- (1 - input$slider3/100 )*100
-    xvalue()[-c(1:2)] [ all_min( second_deriv_smoothed(), resolution ) ]
+    val$xvalues[[input$select2]][-c(1:2)] [ all_min( second_deriv_smoothed(), resolution ) ]
   }
   
   profile_smoothed <- function()
@@ -1913,12 +1885,12 @@ server <- function(input, output, session) {
   local_max <- function()
   {
     resolution <- (1 - input$slider3/100 )*100
-    xvalue()[ all_max( yvalue_deconv(), resolution ) ]
+    val$xvalues[[input$select2]][ all_max( yvalue_deconv(), resolution ) ]
   }
   
   
   plot_2nd_deriv <-function(){
-    plot(xvalue()[-c(1:2)], second_deriv_smoothed(), type = "l", lwd = 2, xaxt = "n", col = "black", 
+    plot(val$xvalues[[input$select2]][-c(1:2)], second_deriv_smoothed(), type = "l", lwd = 2, xaxt = "n", col = "black", 
          las = 1, ylab = "2nd derivative", mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.6,
          xlim = c(xmin_d(), xmax_d()) )
     a <- axTicks(2)
@@ -1973,7 +1945,7 @@ server <- function(input, output, session) {
     if(isTruthy(val$xmax_d_collected[[input$select2]])){
       val$xmax_d_collected[[input$select2]]
     }else{
-      max(xvalue())
+      max(val$xvalues[[input$select2]])
     }})
   
   observe({
@@ -2044,7 +2016,7 @@ server <- function(input, output, session) {
   }
   
   current_model <- function(){
-    sum_of_Peaks(xvalue(), val$peak_height[[input$select2]], 
+    sum_of_Peaks(val$xvalues[[input$select2]], val$peak_height[[input$select2]], 
                  val$peak_pos[[input$select2]], val$peak_sd[[input$select2]],
                  val$peak_asym[[input$select2]],
                  val$peak_type[[input$select2]])
@@ -2085,14 +2057,14 @@ server <- function(input, output, session) {
         
         if(length(val$peak_pos[[input$select2]]) > 0 )
         {
-          val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]] ,( yvalue_deconv() - current_model() )[xvalue() == closest_peak ])
+          val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]] ,( yvalue_deconv() - current_model() )[val$xvalues[[input$select2]] == closest_peak ])
         }else{
-          val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]], yvalue_deconv()[xvalue() == closest_peak ])
+          val$peak_height[[input$select2]] <- c(val$peak_height[[input$select2]], yvalue_deconv()[val$xvalues[[input$select2]] == closest_peak ])
         }
         val$peak_sd[[input$select2]] <- c(val$peak_sd[[input$select2]], input$SD)
         val$peak_pos[[input$select2]] <- c(val$peak_pos[[input$select2]], closest_peak)
         val$peak_asym[[input$select2]] <- c(val$peak_asym[[input$select2]], input$slider4)
-        val$peak_values[[input$select2]][[position_on_list]] <- generate_peak(xvalue(), 
+        val$peak_values[[input$select2]][[position_on_list]] <- generate_peak(val$xvalues[[input$select2]], 
                                                                               val$peak_height[[input$select2]][val$active_peak[[input$select2]] ], 
                                                                               val$peak_pos[[input$select2]][val$active_peak[[input$select2]] ],
                                                                               val$peak_sd[[input$select2]][val$active_peak[[input$select2]] ], 
@@ -2129,7 +2101,7 @@ server <- function(input, output, session) {
   # update values of peak when parameters change
   observe({
     req(val$active_peak[[input$select2]])
-    val$peak_values[[input$select2]][[ val$active_peak[[input$select2]] ]] <- generate_peak(xvalue(), 
+    val$peak_values[[input$select2]][[ val$active_peak[[input$select2]] ]] <- generate_peak(val$xvalues[[input$select2]], 
                                                                                             val$peak_height[[input$select2]][val$active_peak[[input$select2]] ], 
                                                                                             val$peak_pos[[input$select2]][val$active_peak[[input$select2]] ],
                                                                                             val$peak_sd[[input$select2]][val$active_peak[[input$select2]] ], 
@@ -2186,7 +2158,7 @@ server <- function(input, output, session) {
       ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
     }
     
-    plot(xvalue(), yvalue_deconv(), type = "l", lwd = 2, las = 1,
+    plot(val$xvalues[[input$select2]], yvalue_deconv(), type = "l", lwd = 2, las = 1,
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_d(),ymax_d()), 
          xlim =c(xmin_d(),xmax_d()), mgp = c(3.5, 0.8, 0),
@@ -2211,9 +2183,9 @@ server <- function(input, output, session) {
       for(peak in inactive_peaks )
       {
         curve <- val$peak_values[[input$select2]][[ peak ]]
-        points(xvalue(), curve,
+        points(val$xvalues[[input$select2]], curve,
                type = "l")
-        polygon( c(xvalue()[1], xvalue(), tail(xvalue(), 1) ), 
+        polygon( c(val$xvalues[[input$select2]][1], val$xvalues[[input$select2]], tail(val$xvalues[[input$select2]], 1) ), 
                  c(0, curve, 0), col = rgb(0, 0, 0.9, alpha = 0.5),
                  border = NA)
       }
@@ -2224,20 +2196,20 @@ server <- function(input, output, session) {
       # plot active peak last
       peak <- val$active_peak[[input$select2]]
       curve <- val$peak_values[[input$select2]][[ peak ]]
-      points(xvalue(), curve,
+      points(val$xvalues[[input$select2]], curve,
              type = "l")
-      polygon(c(xvalue()[1], xvalue(), tail(xvalue(), 1) ), 
+      polygon(c(val$xvalues[[input$select2]][1], val$xvalues[[input$select2]], tail(val$xvalues[[input$select2]], 1) ), 
               c(0, curve, 0), col = rgb(0, 0.9, 0, alpha = 0.5),
               border = NA)
     }
     
-    points(xvalue(), current_model(), type = "l", 
+    points(val$xvalues[[input$select2]], current_model(), type = "l", 
            col = "grey3", lwd = 2, lty = 2)
     
   }
   
   plot_singleInput_deconv <- function(){
-    if(!is.null(xvalue())){
+    if(!is.null(val$xvalues[[input$select2]])){
       if(input$show_deriv & !input$show_local_max)
       {
         layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) 
@@ -2280,7 +2252,7 @@ server <- function(input, output, session) {
   
   
   output$plot_deconv <- renderPlot({
-    req(xvalue())
+    req(val$xvalues[[input$select2]])
     if( isTruthy( val$baseline[input$select2] ) )
     {
       plot_singleInput_deconv()
@@ -2304,22 +2276,70 @@ server <- function(input, output, session) {
       dev.off()
     })  
   
-  output$test <- renderText(val$active_peak[[input$select2]])
-  
   # Transfer quantification to statistics panel:
   observeEvent(input$to_stats,{
-    File <- rep(val$df_quant[,1], dim(val$df_quant)[2] - 1)
-    Region <- rep(colnames(val$df_quant)[-1], each = dim(val$df_quant)[1] )
-    Values <- unlist( val$df_quant[,-1] )
-    Proportions <- unlist( val$df_quant[,-1]/ val$df_quant[,"Total"] )
-    val$stats_tab <- cbind(File, Region, Values, Proportions)
-    })
+    files <- unique( val$df_quant[1] )
+    val$conditions_tab <- cbind( files, 
+                                 rep("", length(files) ) ,
+                                 rep("", length(files) )
+    )
+    colnames(val$conditions_tab) <- c("File", "Variable1", "Variable2")
+    
+    available_regions <- setdiff( colnames(val$df_quant), c("File", "Total") )
+    updateSelectInput(session, "select_region",
+                      choices = available_regions)
+  })
+  
+  observeEvent(input$add_variable, {
+    new_col <- rep("", dim(val$conditions_tab)[1] )
+    val$conditions_tab <- cbind(val$conditions_tab, new_col)
+    colnames(val$conditions_tab)[dim(val$conditions_tab)[2]] <- paste("Variable", dim(val$conditions_tab)[2] - 1, sep = "")
+  })
+  
+  observeEvent(input$select_region, {
+    Proportions <- val$df_quant[, input$select_region]/val$df_quant[,"Total"]
+    File <- val$df_quant[,1]
+    Conditions <- val$conditions_tab[,-1]
+    val$stats_tab <- cbind(File, Proportions, Conditions)
+  })
+  
+  
+  #### Replace data 
+  observeEvent(input$files_conditions_cell_edit, {
+    val$conditions_tab <<- editData(val$conditions_tab, 
+                                    input$files_conditions_cell_edit,
+                                    "files_conditions")
+    
+    Proportions <- val$df_quant[, input$select_region]/val$df_quant[,"Total"]
+    File <- val$df_quant[,1]
+    Conditions <- val$conditions_tab[,-1]
+    val$stats_tab <- cbind(File, Proportions, Conditions)
+  })
+  
+  output$files_conditions <- renderDT(
+    val$conditions_tab, editable = "cell",
+    options = list(searching=FALSE)
+  )
   
   # create output table showing data for statistics
   output$stats_tab <- renderTable(
     val$stats_tab
   )
   
+  # Export entire analysis:
+  output$export <- downloadHandler(
+    filename <- function(){
+      paste("QuAPPro.RData")
+    },
+    content = function(file) {
+      forExport <- list()
+      for(i in names(val) )
+      {
+        forExport[[ i ]] <- val[[i]]
+      }
+      save(forExport, file = file)
+    }
+  )
 }
 
 ###############
