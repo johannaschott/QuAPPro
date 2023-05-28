@@ -8,8 +8,6 @@
 #                                                   #                                                
 #####################################################                                                 
 
-# Current problems: FLuorescence values not correct, de-convolution not re-loaded upon import
-
 # LOAD REQUIRED PACKAGES:
 
 library(shiny)
