@@ -8,6 +8,9 @@
 #                                                   #                                                
 #####################################################                                                 
 
+# Ideas: filed for name in legend of alignment; 
+# graphical parameters for downloaded plots need to be optimized!
+
 # LOAD REQUIRED PACKAGES:
 
 library(shiny)
@@ -713,9 +716,9 @@ server <- function(input, output, session) {
   
   
   ### INITIAL LOADED FILES
-  # update select output field with the name of every newly loaded file
-  observeEvent(input$input_data, {
-    
+  
+  # function for reading data:
+  read_data <- function(){
     if(grepl("RData", input$input_data$name ) )
       
     {
@@ -729,15 +732,6 @@ server <- function(input, output, session) {
       updateSelectInput(session, "select2",
                         choices = val$files_list)
     }else{
-    
-      val$paths_collected[input$input_data$name] <- input$input_data$datapath
-      val$files_list <- c(input$input_data$name[input$input_data$size != 0], val$files_list)
-      
-      updateSelectInput(session, "select",
-                        choices = val$files_list)
-      
-      updateSelectInput(session, "select2",
-                        choices = val$files_list)
       
       new_names <- input$input_data$name
       new_paths <- input$input_data$datapath
@@ -748,10 +742,13 @@ server <- function(input, output, session) {
         this_path <- new_paths[i]
         
         if( grepl(".pks",as.character(this_name) ) ){
+          
+          data <- read.table(this_path, dec = ",", header = F) 
+          log(data[,3]) # returns an error when data is not numeric
+          val$polysome_data[[this_name]] <- data[,3]
+          
           val$factors_list[[this_name]] <- (0.1/60)
           val$file_types[this_name] <- "pks"
-          data <- read.table(this_path, dec = ",", header = F) 
-          val$polysome_data[[this_name]] <- data[,3]
           val$xvalues[[this_name]] <- (data[ ,1]+1)*val$factors_list[[this_name]]
         }
         
@@ -761,32 +758,62 @@ server <- function(input, output, session) {
           
           if( "SampleFluor" %in% colnames(data) )
           {
-            val$factors_list[[this_name]] <- (0.32/60)
-            val$file_types[this_name] <- "csv_fluo" 
+            log(data[,5]) # returns an error when data is not numeric
+            log(data$SampleFluor) # returns an error when data is not numeric
             val$polysome_data[[this_name]] <- data[ ,5]
             val$fluo_data[[this_name]] <- data$SampleFluor
-            val$xvalues[[this_name]] <- (1:length(data[ ,4]))*val$factors_list[[this_name]]
+            
+            val$factors_list[[this_name]] <- (0.32/60)
+            val$file_types[this_name] <- "csv_fluo" 
+            val$xvalues[[this_name]] <- (1:length(data[,5]))*val$factors_list[[this_name]]
           }
           
           if(!"SampleFluor" %in% colnames(data) )
           {
+            log(data[,5]) # returns an error when the data is not numeric
+            val$polysome_data[[this_name]] <- data[ ,5]
+            
             val$factors_list[[this_name]] <- (0.2/60)
             val$file_types[this_name] <- "csv" 
-            val$polysome_data[[this_name]] <- data[ ,5]
             val$xvalues[[this_name]] <- (1:length(data[ ,5]))*val$factors_list[[this_name]]
           }
         }
         
         if( grepl(".txt",as.character(this_name) ) ){
-          val$factors_list[[this_name]] <- (0.1/60)
-          val$file_types[this_name] <- "pks"
-          data <- read.delim(this_path)[,2]
+          data <- read.delim(this_path)
+          log(data[,2])
+          log(data[,1])
           val$polysome_data[[this_name]] <- data[,2]
           val$xvalues[[this_name]] <-  (data[ ,1]+1)*val$factors_list[[this_name]]
+          
+          val$factors_list[[this_name]] <- (0.1/60)
+          val$file_types[this_name] <- "pks"
+          
         }
-        
       }
     }
+    
+    val$paths_collected[input$input_data$name] <- input$input_data$datapath
+    val$files_list <- c(input$input_data$name[input$input_data$size != 0], val$files_list)
+    
+    updateSelectInput(session, "select",
+                      choices = val$files_list)
+    
+    updateSelectInput(session, "select2",
+                      choices = val$files_list)
+    
+  }
+  
+  # Load data and show error message when loading failed:
+  observeEvent(input$input_data, {
+    loading_attempt <- try( read_data(), silent = T )
+    
+    if( any( class(loading_attempt) == "try-error") )
+    {
+      showNotification("File format not accepted.",
+                       duration = NULL, type = "error")
+    }
+    
   })
   
   output$test <- renderText(input$input_data$name)
@@ -1226,18 +1253,18 @@ server <- function(input, output, session) {
   })
   
   ## plot individual profiles
-  plot_singleFl <-function(){
+  plot_singleFl <-function(cex_lab, cex_axis, lwd){
     if(lost_num_fl() == 1 ){
       ylab <- "Fluo."
     }else{
       ylab <- paste("Fluo. (x ", lost_num_fl(), ")", sep = "")
     }
     
-    plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = 2,
+    plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = lwd,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.6)
+         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = cex.lab)
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.6)
+    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = cex.axis)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1253,33 +1280,33 @@ server <- function(input, output, session) {
       }
     }
     if(input$green_lines){
-      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
-      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
+      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = lwd)
+      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = lwd)
     }
     if(input$red_lines){
-      abline(h = val$baseline_fl[input$select],col = "red", lty=2, lwd = 2)
+      abline(h = val$baseline_fl[input$select],col = "red", lty=2, lwd = lwd)
     }
   }
   
-  plot_singlePol <-function(){
+  plot_singlePol <-function(cex_lab, cex_axis, lwd){
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
     }else{
       ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
     }
     
-    plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = 2,
+    plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = lwd,
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()), mgp = c(3.5, 0.8, 0),
-         yaxt = "n", xaxt = "n", cex.lab = 1.6
+         yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     
     
-    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.6)
+    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = cex_axis)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.6)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = cex_axis)
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1289,48 +1316,48 @@ server <- function(input, output, session) {
       if(isTruthy(val$control_baseline[[input$select_area]][input$select])){
         polygon(c(x_first, val$xvalues[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], x_last),
                 c(val$control_baseline[[input$select_area]][input$select], val$polysome_data[[input$select]][(which(val$xvalues[[input$select]] == (x_first))):(which(val$xvalues[[input$select]] == (x_last)))], val$control_baseline[[input$select_area]][input$select]),
-                col = "#c7e9c0", border = "black", lwd = 2)
+                col = "#c7e9c0", border = "black", lwd = lwd)
       }
     }
     # selected x-anchor and baseline are displayed if box is ticked
     if(input$red_lines){
-      abline(v = val$anchor[input$select]*val$factors_list[[input$select]],col = "red", lty=2, lwd = 2)
-      abline(h = val$baseline[input$select],col = "red", lty=2, lwd = 2)
+      abline(v = val$anchor[input$select]*val$factors_list[[input$select]],col = "red", lty=2, lwd = lwd)
+      abline(h = val$baseline[input$select],col = "red", lty=2, lwd = lwd)
     }
     # selected area starts and ends are displayed if box is ticked
     if(input$green_lines){
-      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
-      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = 2)
+      abline(v = val$file_starts[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = lwd)
+      abline(v = val$file_ends[[input$select]]*val$factors_list[[input$select]],col = "#238b45", lty=2, lwd = lwd)
     }
   }
   
   
   
-  plot_singleInput <- function(){
+  plot_singleInput <- function(cex_lab, cex_axis, lwd, mar_factor){
     if(!is.null(val$xvalues[[input$select]])){
       if(input$show_fl && val$file_types[input$select] == "csv_fluo" ){
         if(val$buttons == 6){
           layout(matrix(2:1, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
-          par(mar = c(5, 5, 0, 2))
-          plot_singlePol()
-          par(mar = c(0, 5, 0.5, 2))
-          plot_singleFl()
+          par(mar = c(5, 5, 0, 2)*mar_factor)
+          plot_singlePol(cex_lab, cex_axis, lwd)
+          par(mar = c(0, 5, 0.5, 2)*mar_factor)
+          plot_singleFl(cex_lab, cex_axis, lwd)
         }else{
           layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
-          par(mar = c(0, 5, 0.5, 2))
-          plot_singleFl()
-          par(mar = c(5, 5, 0, 2))
-          plot_singlePol()
+          par(mar = c(0, 5, 0.5, 2)*mar_factor)
+          plot_singleFl(cex_lab, cex_axis, lwd)
+          par(mar = c(5, 5, 0, 2)*mar_factor)
+          plot_singlePol(cex_lab, cex_axis, lwd)
         }
       }else{
-        par(mar = c(5, 5, 0.5, 2))
-        plot_singlePol()
+        par(mar = c(5, 5, 0.5, 2)*mar_factor)
+        plot_singlePol(cex_lab, cex_axis, lwd)
       }
     }
   }
   
   output$plot_single <- renderPlot({
-    plot_singleInput()
+    plot_singleInput(1.6, 1.6, 2, 1)
   })
   
   # Enable download of current plot as pdf
@@ -1343,8 +1370,8 @@ server <- function(input, output, session) {
       )
     },
     content = function(file) {
-      pdf(file, width = 10, height = 6 )
-      print( plot_singleInput() )
+      pdf(file, width = 2, height = 1.2, pointsize = 15 )
+      print( plot_singleInput(0.7, 0.7, 1, 0.5) )
       dev.off()
     })  
   
