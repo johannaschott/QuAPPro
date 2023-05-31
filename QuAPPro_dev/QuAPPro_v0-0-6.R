@@ -835,7 +835,7 @@ server <- function(input, output, session) {
   fluorescence <- reactive({
     req(input$select) 
     req(input$show_fl)
-    if( val$file_types[[input$select]] == "csv_fluo" ){
+    if( val$file_types[input$select] == "csv_fluo" ){
       smooth_profile( val$fluo_data[[input$select]], input$slider1 )}
     
   })
@@ -1194,7 +1194,7 @@ server <- function(input, output, session) {
   # let axis limits update for fluorescence axis
   observe({
     req(input$select)
-    if( val$file_types[input$select] != "csv_fluo" & input$show_fl){
+    if( val$file_types[input$select] == "csv_fluo" & input$show_fl){
       updateNumericInput(session, "axis1_fl", value = round( ymin_single_fl()/lost_num_fl(), digits = 2 ) )
       updateNumericInput(session, "axis2_fl", value = round( ymax_single_fl()/lost_num_fl(), digits = 2 ) )
     }else{
@@ -1253,7 +1253,8 @@ server <- function(input, output, session) {
   })
   
   ## plot individual profiles
-  plot_singleFl <-function(cex_lab, cex_axis, lwd){
+
+  plot_singleFl <-function(cex_lab, cex_axis, lwd, mgp2){
     if(lost_num_fl() == 1 ){
       ylab <- "Fluo."
     }else{
@@ -1262,9 +1263,11 @@ server <- function(input, output, session) {
     
     plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = lwd,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-         las = 1, ylab = ylab, mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = cex.lab)
+
+         las = 1, ylab = ylab, xlab = "", yaxt = "n", cex.lab = cex_lab, mgp = mgp2)
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = cex.axis)
+    axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = mgp2, cex.axis = cex_axis)
+
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1288,7 +1291,8 @@ server <- function(input, output, session) {
     }
   }
   
-  plot_singlePol <-function(cex_lab, cex_axis, lwd){
+
+  plot_singlePol <-function(cex_lab, cex_axis, lwd, mgp1, mgp2){
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
     }else{
@@ -1296,17 +1300,20 @@ server <- function(input, output, session) {
     }
     
     plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = lwd,
-         ylab = ylab, xlab = "Time (min)",
+
+         ylab = ylab, xlab = "Time (min)", mgp = mgp2,
          ylim = c(ymin_single(),ymax_single()), 
-         xlim =c(xmin_single(),xmax_single()), mgp = c(3.5, 0.8, 0),
+         xlim =c(xmin_single(),xmax_single()),
          yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     
     
-    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = cex_axis)
+
+    axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = cex_axis)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
+
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1332,32 +1339,34 @@ server <- function(input, output, session) {
   }
   
   
-  
-  plot_singleInput <- function(cex_lab, cex_axis, lwd, mar_factor){
+
+  plot_singleInput <- function(cex_lab, cex_axis, lwd, mgp1, mgp2, mar_factor){
     if(!is.null(val$xvalues[[input$select]])){
-      if(input$show_fl && val$file_types[input$select] == "csv_fluo" ){
+      if(input$show_fl & val$file_types[input$select] == "csv_fluo" ){
         if(val$buttons == 6){
-          layout(matrix(2:1, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
+          layout(matrix(2:1, 2, 1), height = c(0.6, 0.9) ) # divides the plotting area into 2 rows
           par(mar = c(5, 5, 0, 2)*mar_factor)
-          plot_singlePol(cex_lab, cex_axis, lwd)
+          plot_singlePol(cex_lab, cex_axis, lwd, mgp1, mgp2)
           par(mar = c(0, 5, 0.5, 2)*mar_factor)
-          plot_singleFl(cex_lab, cex_axis, lwd)
+          plot_singleFl(cex_lab, cex_axis, lwd, mgp2)
         }else{
-          layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
+          layout(matrix(1:2, 2, 1), height = c(0.6, 0.9) ) # divides the plotting area into 2 rows
           par(mar = c(0, 5, 0.5, 2)*mar_factor)
-          plot_singleFl(cex_lab, cex_axis, lwd)
+          plot_singleFl(cex_lab, cex_axis, lwd, mgp2)
           par(mar = c(5, 5, 0, 2)*mar_factor)
-          plot_singlePol(cex_lab, cex_axis, lwd)
+          plot_singlePol(cex_lab, cex_axis, lwd, mgp1, mgp2)
         }
       }else{
         par(mar = c(5, 5, 0.5, 2)*mar_factor)
-        plot_singlePol(cex_lab, cex_axis, lwd)
+        plot_singlePol(cex_lab, cex_axis, lwd, mgp1, mgp2)
       }
     }
   }
   
   output$plot_single <- renderPlot({
-    plot_singleInput(1.6, 1.6, 2, 1)
+    plot_singleInput(cex_lab = 1.6, cex_axis = 1.6, lwd = 2, 
+                     mgp1 = c(3.5, 1.2, 0), mgp2 = c(3.5, 0.8, 0), 
+                     mar_factor = 1)
   })
   
   # Enable download of current plot as pdf
@@ -1370,8 +1379,10 @@ server <- function(input, output, session) {
       )
     },
     content = function(file) {
-      pdf(file, width = 2, height = 1.2, pointsize = 15 )
-      print( plot_singleInput(0.7, 0.7, 1, 0.5) )
+      pdf(file, width = 2, height = 1.2, pointsize = 6 )
+      print( plot_singleInput(cex_lab = 0.8, cex_axis = 1, lwd = 1, 
+                              mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0), 
+                              mar_factor = 0.6) )
       dev.off()
     })  
   
@@ -1702,7 +1713,9 @@ server <- function(input, output, session) {
   
   #### plotting function for aligned profiles
   
-  plot_alignedPol <- function(){
+  plot_alignedPol <- function(cex_lab, cex_axis, lwd, 
+                              mgp1, mgp2, 
+                              cex_legend, lwd_factor){
     if(lost_num_al_pol() == 1 ){
       ylab <- "UV abs."
     }else{
@@ -1712,11 +1725,11 @@ server <- function(input, output, session) {
     f <- val$files_to_plot[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     plot(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]],
-         lwd = val$linewidth_collected[[f]], 
+         lwd = val$linewidth_collected[[f]]*lwd_factor, 
          ylab = ylab, xlab = "Relative position", las = 1,
-         col = val$color_vector[[f]], mgp = c(3.5, 1, 0), 
+         col = val$color_vector[[f]], mgp = mgp2, 
          ylim = c(val$ymin,val$ymax), xlim = c(val$xmin,val$xmax),
-         yaxt = "n", xaxt = "n", cex.lab = 1.6
+         yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     
     
@@ -1732,14 +1745,14 @@ server <- function(input, output, session) {
     ### Shows anchor (when "Display x-anchor in alignment" is selected)
     if(input$anchor_line == TRUE){
       anchor_line <- val$anchor[val$files_to_plot[1]] / norm_factor_x()[val$files_to_plot[1]] + shifts()[val$files_to_plot[1]]
-      abline(v = anchor_line, col = "red", lty=2, lwd = 2)
+      abline(v = anchor_line, col = "red", lty=2, lwd = lwd)
     }
     
     a <- axTicks(1)
-    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.6)
+    axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = mgp1, cex.axis = cex_axis)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.6)
+    axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
     
     for(f in val$files_to_plot[-1])
     {
@@ -1756,18 +1769,19 @@ server <- function(input, output, session) {
       
       # plot files in alignment
       points(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]], 
-             lwd = val$linewidth_collected[[f]], col = val$color_vector[[f]])
+             lwd = val$linewidth_collected[[f]]*lwd_factor, col = val$color_vector[[f]])
     }
     legend("topright", legend = val$files_to_plot, lty = unlist(val$linetype_collected[val$files_to_plot]), 
-           lwd = unlist(val$linewidth_collected[val$files_to_plot]), col = unlist(val$color_vector[val$files_to_plot]),
-           bty = "n", cex = 1.5
+           lwd = unlist(val$linewidth_collected[val$files_to_plot])*lwd_factor, col = unlist(val$color_vector[val$files_to_plot]),
+           bty = "n", cex = cex_legend
     )
     
     #create reactive dataframe of all plots to have access outside of renderPlot function
     val$csv_file_df <- csv_file_df
   }
   
-  plot_alignedFluo <- function(){
+  plot_alignedFluo <- function(cex_lab, cex_axis, lwd, 
+                               mgp2, lwd_factor){
     
     if(lost_num_al_fl() == 1 ){
       ylab <- "Fluo."
@@ -1779,11 +1793,11 @@ server <- function(input, output, session) {
     f <-  files_in_al_fluo[1]
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     plot(x, values_fluorescence()[[f]], type = "l", lty = val$linetype_collected[[f]],
-         lwd = val$linewidth_collected[[f]],
+         lwd = val$linewidth_collected[[f]]*lwd_factor,
          ylab = ylab, xlab = "", las = 1,
-         col = val$color_vector[[f]], mgp = c(3.5, 0.8, 0), 
+         col = val$color_vector[[f]], mgp = mgp2, 
          ylim = c(val$ymin_fl,val$ymax_fl), xlim = c(val$xmin,val$xmax),
-         yaxt = "n", xaxt = "n", cex.lab = 1.6
+         yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     # store values in df for creating fluo alignment table
     y_aligned <- values_fluorescence()[[f]]
@@ -1795,7 +1809,7 @@ server <- function(input, output, session) {
     csv_file_df_fluo <- df
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.6)
+    axis(2, at = a, labels = a/lost_num_al_fl(), las = 1, mgp = mgp2, cex.axis = cex_axis)
     
     for(f in  files_in_al_fluo[-1])
     {
@@ -1812,23 +1826,31 @@ server <- function(input, output, session) {
       csv_file_df_fluo <- merge(csv_file_df_fluo, df2, by="Index", all = T)
       
       points(x, values_fluorescence()[[f]], type = "l", lty = val$linetype_collected[[f]], 
-             lwd = val$linewidth_collected[[f]], col = val$color_vector[[f]])
+             lwd = val$linewidth_collected[[f]]*lwd_factor, col = val$color_vector[[f]])
     }
     
     #create reactive dataframe of all plots to have access outside of renderPlot function
     val$csv_file_df_all <- merge(val$csv_file_df, csv_file_df_fluo, by="Index", all = T)
   }
   
-  plot_alignment <- function(){
+  plot_alignment <- function(cex_lab, cex_axis, lwd, 
+                             mgp1, mgp2, 
+                             cex_legend, lwd_factor,
+                             mar_factor){
     if(input$show_fl_al){
       layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
-      par(mar = c(0, 5, 0.5, 2))
-      plot_alignedFluo()
-      par(mar = c(5, 5, 0, 2)) 
-      plot_alignedPol()
+      par(mar = c(0, 5, 0.5, 2)*mar_factor)
+      plot_alignedFluo(cex_lab, cex_axis, lwd, 
+                       mgp2, lwd_factor)
+      par(mar = c(5, 5, 0, 2)*mar_factor) 
+      plot_alignedPol(cex_lab, cex_axis, lwd, 
+                      mgp1, mgp2, 
+                      cex_legend, lwd_factor)
     }else{
-      par(mar = c(5, 5, 0.5, 2))
-      plot_alignedPol()
+      par(mar = c(5, 5, 0.5, 2)*mar_factor)
+      plot_alignedPol(cex_lab, cex_axis, lwd, 
+                      mgp1, mgp2, 
+                      cex_legend, lwd_factor)
     }
   }
   
@@ -1836,7 +1858,10 @@ server <- function(input, output, session) {
     req(val$files_to_plot)
     if(length(val$files_to_plot) >= 1)
     {
-      plot_alignment()
+      plot_alignment(cex_lab = 1.6, cex_axis = 1.6, lwd = 2, 
+                     mgp1 = c(3.5, 1.2, 0), mgp2 = c(3.5, 0.8, 0), 
+                     cex_legend = 1, lwd_factor = 1,
+                     mar_factor = 1)
     }
   })
   
@@ -1845,8 +1870,11 @@ server <- function(input, output, session) {
   output$downloadPlot <- downloadHandler(
     filename = "alignment.pdf",
     content = function(file) {
-      pdf(file, width = 10, height = 6 )
-      print( plot_alignment() )
+      pdf(file,width = 2, height = 1.2, pointsize = 6 )
+      print( plot_alignment(cex_lab = 1, cex_axis = 1, lwd = 1, 
+                            mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0),  
+                            cex_legend = 0.8, lwd_factor = 0.5,
+                            mar_factor = 0.6) )
       dev.off()
     })  
   
@@ -1914,7 +1942,7 @@ server <- function(input, output, session) {
   }
   
   
-  plot_2nd_deriv <-function(){
+  plot_2nd_deriv <-function(cex_lab, cex_axis, lwd, mgp2){
     plot(val$xvalues[[input$select2]][-c(1:2)], second_deriv_smoothed(), type = "l", lwd = 2, xaxt = "n", col = "black", 
          las = 1, ylab = "2nd derivative", mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.6,
          xlim = c(xmin_d(), xmax_d()) )
@@ -2176,30 +2204,31 @@ server <- function(input, output, session) {
     val$active_peak[[input$select2]] <- which(val$peak_pos[[input$select2]] == val$quantified_peaks_pos[[input$select_peak]][input$select2]  )
   })
   
-  plot_singlePol_deconv <-function(){
+  plot_singlePol_deconv <-function(cex_lab, cex_axis, lwd, 
+                                   mgp1, mgp2){
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
     }else{
       ylab <- paste("UV abs. (x ", lost_num_pol(), ")", sep = "")
     }
     
-    plot(val$xvalues[[input$select2]], yvalue_deconv(), type = "l", lwd = 2, las = 1,
+    plot(val$xvalues[[input$select2]], yvalue_deconv(), type = "l", lwd = lwd, las = 1,
          ylab = ylab, xlab = "Time (min)",
          ylim = c(ymin_d(),ymax_d()), 
-         xlim =c(xmin_d(),xmax_d()), mgp = c(3.5, 0.8, 0),
-         yaxt = "n", xaxt = "n", cex.lab = 1.6
+         xlim =c(xmin_d(),xmax_d()), mgp = mgp2,
+         yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     
     
-    axis(1, las = 1, mgp = c(3.5, 1.2, 0), cex.axis = 1.6)
+    axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
     
     a <- axTicks(2)
-    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = c(3.5, 0.8, 0), cex.axis = 1.6)
+    axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
   }
   
   # add curves of peaks and model:
   # Plot active peak last
-  plot_peaks <- function(){
+  plot_peaks <- function(lwd){
     req(val$peak_pos[[input$select2]])
     if(length(val$peak_pos[[input$select2]]) > length( val$active_peak[[input$select2]] ) )
     {
@@ -2229,41 +2258,46 @@ server <- function(input, output, session) {
     }
     
     points(val$xvalues[[input$select2]], current_model(), type = "l", 
-           col = "grey3", lwd = 2, lty = 2)
+           col = "grey3", lwd = lwd, lty = 2)
     
   }
   
-  plot_singleInput_deconv <- function(){
+  plot_singleInput_deconv <- function(cex_lab, cex_axis, lwd, 
+                                      mgp1, mgp2, 
+                                      mar_factor){
     if(!is.null(val$xvalues[[input$select2]])){
       if(input$show_deriv & !input$show_local_max)
       {
         layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) 
-        par(mar = c(0, 5, 0.5, 2))
-        plot_2nd_deriv()
-        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = 2 )
-        par(mar = c(5, 5, 0, 2))
-        plot_singlePol_deconv()
-        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = 2 )
+        par(mar = c(0, 5, 0.5, 2)*mar_factor)
+        plot_2nd_deriv(cex_lab, cex_axis, lwd, mgp2)
+        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = lwd )
+        par(mar = c(5, 5, 0, 2)*mar_factor)
+        plot_singlePol_deconv(cex_lab, cex_axis, lwd, 
+                              mgp1, mgp2)
+        abline( v = second_deriv_min(), col = "red", lty = 2, lwd = lwd )
         if(length(val$peak_pos[[input$select2]]) > 0){
-          plot_peaks()
+          plot_peaks(lwd)
         }
         
       }
       if(input$show_local_max & !input$show_deriv)
       {
-        par(mar = c(5, 5, 0.5, 2))
-        plot_singlePol_deconv()
-        abline( v = local_max(), col = "blue", lty = 2, lwd = 2 )
+        par(mar = c(5, 5, 0.5, 2)*mar_factor)
+        plot_singlePol_deconv(cex_lab, cex_axis, lwd, 
+                              mgp1, mgp2)
+        abline( v = local_max(), col = "blue", lty = 2, lwd = lwd )
         if(length(val$peak_pos[[input$select2]]) > 0){
-          plot_peaks()
+          plot_peaks(lwd)
         }
       }
       if(!input$show_local_max & !input$show_deriv)
       {
-        par(mar = c(5, 5, 0.5, 2))
-        plot_singlePol_deconv()
+        par(mar = c(5, 5, 0.5, 2)*mar_factor)
+        plot_singlePol_deconv(cex_lab, cex_axis, lwd, 
+                              mgp1, mgp2)
         if(length(val$peak_pos[[input$select2]]) > 0){
-          plot_peaks()
+          plot_peaks(lwd)
         }
       }
     }
@@ -2280,7 +2314,9 @@ server <- function(input, output, session) {
     req(val$xvalues[[input$select2]])
     if( isTruthy( val$baseline[input$select2] ) )
     {
-      plot_singleInput_deconv()
+      plot_singleInput_deconv(cex_lab = 1.6, cex_axis = 1.6, lwd = 2, 
+                              mgp1 = c(3.5, 1.2, 0), mgp2 = c(3.5, 0.8, 0), 
+                              mar_factor = 1)
     }else{
       show_note()
     }
@@ -2296,8 +2332,10 @@ server <- function(input, output, session) {
       )
     },
     content = function(file) {
-      pdf(file, width = 10, height = 6 )
-      print( plot_singleInput_deconv() )
+      pdf(file, width = 2, height = 1.2, pointsize = 6 )
+      print( plot_singleInput_deconv(cex_lab = 1, cex_axis = 1, lwd = 1, 
+                                     mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0), 
+                                     mar_factor = 0.6) )
       dev.off()
     })  
   
