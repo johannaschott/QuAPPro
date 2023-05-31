@@ -1253,6 +1253,7 @@ server <- function(input, output, session) {
   })
   
   ## plot individual profiles
+
   plot_singleFl <-function(cex_lab, cex_axis, lwd, mgp2){
     if(lost_num_fl() == 1 ){
       ylab <- "Fluo."
@@ -1262,9 +1263,11 @@ server <- function(input, output, session) {
     
     plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = lwd,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
+
          las = 1, ylab = ylab, xlab = "", yaxt = "n", cex.lab = cex_lab, mgp = mgp2)
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = mgp2, cex.axis = cex_axis)
+
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1288,6 +1291,7 @@ server <- function(input, output, session) {
     }
   }
   
+
   plot_singlePol <-function(cex_lab, cex_axis, lwd, mgp1, mgp2){
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
@@ -1296,6 +1300,7 @@ server <- function(input, output, session) {
     }
     
     plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = lwd,
+
          ylab = ylab, xlab = "Time (min)", mgp = mgp2,
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()),
@@ -1303,10 +1308,12 @@ server <- function(input, output, session) {
     )
     
     
+
     axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
+
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1332,7 +1339,7 @@ server <- function(input, output, session) {
   }
   
   
-  
+
   plot_singleInput <- function(cex_lab, cex_axis, lwd, mgp1, mgp2, mar_factor){
     if(!is.null(val$xvalues[[input$select]])){
       if(input$show_fl & val$file_types[input$select] == "csv_fluo" ){
