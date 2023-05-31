@@ -190,7 +190,7 @@ ui <- fluidPage(
              fluidRow(
                column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload polysome profile or previous analysis", multiple = T, accept = c(".pks",".csv", ".txt", ".RData")),
+                      fileInput("input_data", "Upload polysome profile or previous analysis", multiple = T, accept = c(".pks",".csv", ".txt")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -230,7 +230,6 @@ ui <- fluidPage(
                       
                ),
                column(4, style = "padding-top:22px",
-                      textOutput("test"),
                       plotOutput("plot_single", click = "click")
                ),
                column(4, style = "padding-top:22px",
@@ -264,6 +263,7 @@ ui <- fluidPage(
                                numericInput("axis4_a", "Set x max", value = NULL, step = 1)
                         )
                       )
+                      ########
                )
              ),
              
@@ -444,7 +444,8 @@ ui <- fluidPage(
                       checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
                       checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
                       checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      downloadButton("export", "Export analysis", width = "100%")
+                      downloadButton("export", "Export analysis", width = "100%"),
+                      fileInput("import", "Import analysis (.RData)", accept = ".RData")
                   
                )
              )
@@ -679,7 +680,6 @@ server <- function(input, output, session) {
   ### REACTIVE VALUES FOR LISTS BUILT ALONG THE SESSION
   # create reactive values for collecting values in a list/vector/data.frame
   val <- reactiveValues(
-    paths_collected = vector(),
     colors_collected = list(),
     color_vector = vector(),
     linetype_collected = list(),
@@ -706,6 +706,7 @@ server <- function(input, output, session) {
     ymin_collected_fl = list(),
     ymax_collected_fl = list(),
     polysome_data = list(),
+    xvalues = list(),
     files_list = list(),
     peak_list = vector(),
     align_files_list = vector(),
@@ -717,79 +718,97 @@ server <- function(input, output, session) {
   
   ### INITIAL LOADED FILES
   
-  # function for reading data:
-  read_data <- function(){
-    if(grepl("RData", input$input_data$name ) )
+  # load previous analysis from .RData file:
+  import <- function(){
+    if(grepl("RData", input$import$name ) )
       
     {
-      load(input$input_data$datapath)
+      load(input$import$datapath)
+      
       for(i in names(forExport))
       {
         val[[ i ]] <- forExport[[i]]
       }
+      
       updateSelectInput(session, "select",
                         choices = val$files_list)
       updateSelectInput(session, "select2",
                         choices = val$files_list)
-    }else{
+    }
+  }
       
-      new_names <- input$input_data$name
-      new_paths <- input$input_data$datapath
+  # Load data and show error message when loading failed:
+  observeEvent(input$import, {
+    loading_attempt <- try( import(), silent = T )
+    
+    if( any( class(loading_attempt) == "try-error") )
+    {
+      showNotification("File format not accepted.",
+                       duration = NULL, type = "error")
+    }
+    
+  })
+  
+  
+  
+  # function for reading data:
+  read_data <- function(){
+    
+    new_names <- input$input_data$name
+    new_paths <- input$input_data$datapath
+    
+    for(i in 1:length(new_names))
+    {
+      this_name <- new_names[i]
+      this_path <- new_paths[i]
       
-      for(i in 1:length(new_names))
-      {
-        this_name <- new_names[i]
-        this_path <- new_paths[i]
+      if( grepl(".pks",as.character(this_name) ) ){
         
-        if( grepl(".pks",as.character(this_name) ) ){
+        data <- read.table(this_path, dec = ",", header = F) 
+        log(data[,3]) # returns an error when data is not numeric
+        val$polysome_data[[this_name]] <- data[,3]
+        
+        val$factors_list[[this_name]] <- (0.1/60)
+        val$file_types[this_name] <- "pks"
+        val$xvalues[[this_name]] <- (data[ ,1]+1)*val$factors_list[[this_name]]
+      }
+      
+      if( grepl(".csv",as.character(this_name) )  ){
+        start <- grep("Data Columns:", readLines(this_path))
+        data <- read.csv(this_path, skip = start)
+        
+        if( "SampleFluor" %in% colnames(data) )
+        {
+          log(data[,5]) # returns an error when data is not numeric
+          log(data$SampleFluor) # returns an error when data is not numeric
+          val$polysome_data[[this_name]] <- data[ ,5]
+          val$fluo_data[[this_name]] <- data$SampleFluor
           
-          data <- read.table(this_path, dec = ",", header = F) 
-          log(data[,3]) # returns an error when data is not numeric
-          val$polysome_data[[this_name]] <- data[,3]
-          
-          val$factors_list[[this_name]] <- (0.1/60)
-          val$file_types[this_name] <- "pks"
-          val$xvalues[[this_name]] <- (data[ ,1]+1)*val$factors_list[[this_name]]
+          val$factors_list[[this_name]] <- (0.32/60)
+          val$file_types[this_name] <- "csv_fluo" 
+          val$xvalues[[this_name]] <- (1:length(data[,5]))*val$factors_list[[this_name]]
         }
         
-        if( grepl(".csv",as.character(this_name) )  ){
-          start <- grep("Data Columns:", readLines(this_path))
-          data <- read.csv(this_path, skip = start)
+        if(!"SampleFluor" %in% colnames(data) )
+        {
+          log(data[,5]) # returns an error when the data is not numeric
+          val$polysome_data[[this_name]] <- data[ ,5]
           
-          if( "SampleFluor" %in% colnames(data) )
-          {
-            log(data[,5]) # returns an error when data is not numeric
-            log(data$SampleFluor) # returns an error when data is not numeric
-            val$polysome_data[[this_name]] <- data[ ,5]
-            val$fluo_data[[this_name]] <- data$SampleFluor
-            
-            val$factors_list[[this_name]] <- (0.32/60)
-            val$file_types[this_name] <- "csv_fluo" 
-            val$xvalues[[this_name]] <- (1:length(data[,5]))*val$factors_list[[this_name]]
-          }
-          
-          if(!"SampleFluor" %in% colnames(data) )
-          {
-            log(data[,5]) # returns an error when the data is not numeric
-            val$polysome_data[[this_name]] <- data[ ,5]
-            
-            val$factors_list[[this_name]] <- (0.2/60)
-            val$file_types[this_name] <- "csv" 
-            val$xvalues[[this_name]] <- (1:length(data[ ,5]))*val$factors_list[[this_name]]
-          }
+          val$factors_list[[this_name]] <- (0.2/60)
+          val$file_types[this_name] <- "csv" 
+          val$xvalues[[this_name]] <- (1:length(data[ ,5]))*val$factors_list[[this_name]]
         }
+      }
+      
+      if( grepl(".txt",as.character(this_name) ) ){
+        data <- read.delim(this_path)
+        log(data[,2])
+        log(data[,1])
+        val$polysome_data[[this_name]] <- data[,2]
+        val$xvalues[[this_name]] <-  (data[ ,1]+1)*val$factors_list[[this_name]]
         
-        if( grepl(".txt",as.character(this_name) ) ){
-          data <- read.delim(this_path)
-          log(data[,2])
-          log(data[,1])
-          val$polysome_data[[this_name]] <- data[,2]
-          val$xvalues[[this_name]] <-  (data[ ,1]+1)*val$factors_list[[this_name]]
-          
-          val$factors_list[[this_name]] <- (0.1/60)
-          val$file_types[this_name] <- "pks"
-          
-        }
+        val$factors_list[[this_name]] <- (0.1/60)
+        val$file_types[this_name] <- "pks"
       }
     }
     
@@ -816,7 +835,6 @@ server <- function(input, output, session) {
     
   })
   
-  output$test <- renderText(input$input_data$name)
   
   # notification if empty file is loaded
   observeEvent(input$input_data,{
@@ -1253,7 +1271,6 @@ server <- function(input, output, session) {
   })
   
   ## plot individual profiles
-
   plot_singleFl <-function(cex_lab, cex_axis, lwd, mgp2){
     if(lost_num_fl() == 1 ){
       ylab <- "Fluo."
@@ -1263,11 +1280,9 @@ server <- function(input, output, session) {
     
     plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = lwd,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
-
          las = 1, ylab = ylab, xlab = "", yaxt = "n", cex.lab = cex_lab, mgp = mgp2)
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_fl(), las = 1, mgp = mgp2, cex.axis = cex_axis)
-
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1291,7 +1306,6 @@ server <- function(input, output, session) {
     }
   }
   
-
   plot_singlePol <-function(cex_lab, cex_axis, lwd, mgp1, mgp2){
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
@@ -1300,7 +1314,6 @@ server <- function(input, output, session) {
     }
     
     plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = lwd,
-
          ylab = ylab, xlab = "Time (min)", mgp = mgp2,
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()),
@@ -1308,12 +1321,10 @@ server <- function(input, output, session) {
     )
     
     
-
     axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
-
     # show polygon automatically from start to stop value the user quantified
     # if the user selects a quantified area again, the respective polygon gets displayed in the plot again
     if(isTruthy(val$area_starts[[input$select_area]][input$select]) && isTruthy(val$area_ends[[input$select_area]][input$select]) & input$green_lines & isTruthy(val$baseline[input$select])){
@@ -1339,7 +1350,7 @@ server <- function(input, output, session) {
   }
   
   
-
+  
   plot_singleInput <- function(cex_lab, cex_axis, lwd, mgp1, mgp2, mar_factor){
     if(!is.null(val$xvalues[[input$select]])){
       if(input$show_fl & val$file_types[input$select] == "csv_fluo" ){
@@ -1871,7 +1882,7 @@ server <- function(input, output, session) {
     filename = "alignment.pdf",
     content = function(file) {
       pdf(file,width = 2, height = 1.2, pointsize = 6 )
-      print( plot_alignment(cex_lab = 1, cex_axis = 1, lwd = 1, 
+      print( plot_alignment(cex_lab = 0.8, cex_axis = 1, lwd = 1, 
                             mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0),  
                             cex_legend = 0.8, lwd_factor = 0.5,
                             mar_factor = 0.6) )
@@ -2268,7 +2279,7 @@ server <- function(input, output, session) {
     if(!is.null(val$xvalues[[input$select2]])){
       if(input$show_deriv & !input$show_local_max)
       {
-        layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) 
+        layout(matrix(1:2, 2, 1), height = c(0.6, 0.9) ) 
         par(mar = c(0, 5, 0.5, 2)*mar_factor)
         plot_2nd_deriv(cex_lab, cex_axis, lwd, mgp2)
         abline( v = second_deriv_min(), col = "red", lty = 2, lwd = lwd )
