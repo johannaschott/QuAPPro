@@ -190,7 +190,7 @@ ui <- fluidPage(
              fluidRow(
                column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload polysome profile or previous analysis", multiple = T, accept = c(".pks",".csv", ".txt")),
+                      fileInput("input_data", "Upload polysome profile data", multiple = T, accept = c(".pks",".csv", ".txt")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
