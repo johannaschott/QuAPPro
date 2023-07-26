@@ -8,8 +8,6 @@
 #                                                   #                                                
 #####################################################                                                 
 
-# Ideas: filed for name in legend of alignment; 
-# graphical parameters for downloaded plots need to be optimized!
 
 # LOAD REQUIRED PACKAGES:
 
@@ -26,10 +24,6 @@ library(DT)
 
 
 # FUNCTIONS:
-
-render_dt = function(data, editable = 'cell', server = TRUE, ...) {
-  renderDT(data, selection = 'none', server = server, editable = editable, ...)
-}
 
 # Find closest point in a two-dimensional coordinate system:
 
@@ -190,7 +184,7 @@ ui <- fluidPage(
              fluidRow(
                column(2, style = "padding-left:20px",
                       # create area for uploading .pks file
-                      fileInput("input_data", "Upload polysome profile data", multiple = T, accept = c(".pks",".csv", ".txt")),
+                      fileInput("input_data", "Upload polysome profile data", multiple = T, accept = c(".pks",".csv", ".txt", ".RData")),
                       
                       #Let user select their loaded files and set x-anchor and baseline
                       selectInput("select", "Select files", choices = c(), width = '100%'),
@@ -201,7 +195,7 @@ ui <- fluidPage(
                       fluidRow( 
                         column(12, tags$h4(tags$strong("Fluorescence profile")))),
                       fluidRow( 
-                        column(12, tags$h6("Set fluorescence baseline"))),
+                        column(12, tags$h5("Set fluorescence baseline"))),
                       fluidRow(         
                         # show fluorescence signal or not?
                         # set a separate baseline for the fluorescence signal
@@ -280,10 +274,10 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(6,
-                               tags$h6("Set baseline and alignment anchor")
+                               tags$h5("Set baseline and alignment anchor")
                         ),
                         column(6,
-                               tags$h6("Set area start and end")
+                               tags$h5("Set area start and end")
                         )
                       ),
                       
@@ -365,7 +359,7 @@ ui <- fluidPage(
                       ),
                       fluidRow(
                         column(12,
-                               tags$h6("(Baseline and x-anchor need to be set)")
+                               tags$h5("(Baseline and x-anchor need to be set)")
                         )
                       ),
                       
@@ -374,12 +368,12 @@ ui <- fluidPage(
                         column(8,
                                selectInput("select_alignment", "Available profiles", choices = c(), width = '100%')
                         ),
-                        column(1, style = "padding-top:20px",
+                        column(1, style = "padding-top:22px",
                                actionButton("up", label = NULL, icon = icon("angle-double-up"), width = '100%',
                                             style = "padding-left:5px"
                                )
                         ),
-                        column(1, style = "padding-top:20px",
+                        column(1, style = "padding-top:22px",
                                actionButton("down", label = NULL, icon = icon("angle-double-down"), width = '100%',
                                             style = "padding-left:5px"
                                )
@@ -389,8 +383,18 @@ ui <- fluidPage(
                       ),
                       
                       fluidRow(
+                        column(6, 
+                               textInput("new_name", "Name in Legend", value = "", width = '100%', placeholder = "Name")
+                        ),
+                        column(6, style = "padding-top:22px",
+                               actionButton("rename", "Rename", width = '100%')
+                        ),
+                        style = "padding-right:35px"
+                      ),
+                      
+                      fluidRow(
                         column(12,
-                               tags$h6("Remove and restore profiles from alignment"))
+                               tags$h5("Remove and restore profiles from alignment"))
                       ),
                       
                       fluidRow(
@@ -421,7 +425,7 @@ ui <- fluidPage(
                       ),
                       
                       fluidRow(
-                        tags$h6("Adjust selected profile yourself:")
+                        tags$h5("Adjust selected profile yourself:")
                       ),
                       
                       fluidRow(
@@ -444,9 +448,7 @@ ui <- fluidPage(
                       checkboxInput("anchor_line", "Display x-anchor in alignment", value = TRUE, width = NULL),
                       checkboxInput("normalize_height", HTML("Normalize <b>height</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
                       checkboxInput("normalize_length", HTML("Normalize <b>length</b> in alignment <br/> (Requirement: ALL total areas)"), value = FALSE, width = NULL),
-                      downloadButton("export", "Export analysis", width = "100%"),
-                      fileInput("import", "Import analysis (.RData)", accept = ".RData")
-                  
+                      downloadButton("export", "Export analysis", width = "100%")
                )
              )
              
@@ -495,10 +497,10 @@ ui <- fluidPage(
                       
                       fluidRow(
                         column(6,
-                               checkboxInput("show_deriv", "Show 2nd deriv. minima", value = FALSE, width = NULL)
+                               checkboxInput("show_deriv", "Show 2nd deriv. minima", value = TRUE, width = NULL)
                         ),
                         column(6,
-                               checkboxInput("show_local_max", "Show local maxima", value = TRUE, width = NULL)
+                               checkboxInput("show_local_max", "Show local maxima", value = FALSE, width = NULL)
                         )
                       ),
                       fluidRow(
@@ -596,13 +598,10 @@ ui <- fluidPage(
     # shows updating table of quantified areas for respective plots, download possible 
     tabPanel(tags$strong("Quantification summary"), icon = icon("list-alt"), 
              fluidRow(
-               column(10,
+               column(12,
                       tags$h4("Table of quantified areas or peaks"),
                       tableOutput("quantification"),
                       downloadButton("downloadQuant", "Download .csv file")
-               ),
-               column(2, style = "padding-top:20px", 
-                      actionButton("to_stats", "Transfer to Stats", width = '80%', icon = icon("chart-line") )
                )
              )
     ),
@@ -710,48 +709,53 @@ server <- function(input, output, session) {
     files_list = list(),
     peak_list = vector(),
     align_files_list = vector(),
-    area_list = vector()
-    
+    area_list = vector(),
+    legend_names = vector()
   )
   
   
   
   ### INITIAL LOADED FILES
   
-  # load previous analysis from .RData file:
+  # function for loading previous analysis from .RData file:
   import <- function(){
-    if(grepl("RData", input$import$name ) )
-      
+    load(input$input_data$datapath)
+    
+    for(i in names(forExport))
     {
-      load(input$import$datapath)
-      
-      for(i in names(forExport))
-      {
-        val[[ i ]] <- forExport[[i]]
-      }
-      
-      updateSelectInput(session, "select",
-                        choices = val$files_list)
-      updateSelectInput(session, "select2",
-                        choices = val$files_list)
+      val[[ i ]] <- forExport[[i]]
+    }
+    
+    updateSelectInput(session, "select",
+                      choices = val$files_list, selected = val$files_list[[1]])
+    
+    updateSelectInput(session, "select2",
+                      choices = val$files_list, selected = val$files_list[[1]])
+    
+    updateSelectInput(session, "select_alignment",
+                      choices = val$align_files_list)
+    
+    updateSelectInput(session, "select_area",
+                      choices = c(val$area_list, "Total", "Monosomes", "Polysomes", "40S", "60S"))
+    
+    updateColourInput(session, "color", value = val$color_vector[[input$select_alignment]])
+    updateNumericInput(session, "linewidth", value = val$linewidth_collected[[input$select_alignment]]  )
+    updateSelectInput(session, "linetype", 
+                      selected = c("solid", "dashed", "dotted",
+                                   "dotdash", "longdash", "twodash")[ val$linetype_collected[[input$select_alignment]] ])
+    
+    updateSelectInput(session, "select_peak",
+                      choices = c(val$peak_list, "40S", "60S", "80S", "Halfmers"), selected = )
+    
+    if(length(val$active_peak) > 0) 
+    {
+      updateNumericInput(session, "SD", value = val$peak_sd[[input$select2]][val$active_peak[[input$select2]]])
+      updateNumericInput(session, "height", value = round( val$peak_height[[input$select2]][val$active_peak[[input$select2]]], digits = 2) )
+      updateSliderInput(session, "slider4", value = val$peak_asym[[input$select2]][val$active_peak[[input$select2]]])
     }
   }
       
-  # Load data and show error message when loading failed:
-  observeEvent(input$import, {
-    loading_attempt <- try( import(), silent = T )
-    
-    if( any( class(loading_attempt) == "try-error") )
-    {
-      showNotification("File format not accepted.",
-                       duration = NULL, type = "error")
-    }
-    
-  })
-  
-  
-  
-  # function for reading data:
+ # function for reading polysome profile data:
   read_data <- function(){
     
     new_names <- input$input_data$name
@@ -825,14 +829,24 @@ server <- function(input, output, session) {
   
   # Load data and show error message when loading failed:
   observeEvent(input$input_data, {
-    loading_attempt <- try( read_data(), silent = T )
-    
-    if( any( class(loading_attempt) == "try-error") )
+    if( length(input$input_data$name) > 1 & any(grepl("RData", input$input_data$name ) ) )
     {
-      showNotification("File format not accepted.",
+      showNotification("Please select only one .RData file.",
                        duration = NULL, type = "error")
-    }
+    }else{
     
+      if( length(input$input_data$name) == 1 & grepl("RData", input$input_data$name ) )
+      {
+        loading_attempt <- try( import(), silent = T )
+      }else{
+        loading_attempt <- try( read_data(), silent = T )
+      }
+      if( any( class(loading_attempt) == "try-error") )
+      {
+        showNotification("File format not accepted.",
+                         duration = NULL, type = "error")
+      }
+    }
   })
   
   
@@ -1192,12 +1206,12 @@ server <- function(input, output, session) {
     }
   })
   
-  observe({
-    updateNumericInput(session, "axis3", value = round(xmin_single(), digits = 2 ) )
-    updateNumericInput(session, "axis4", value = round(xmax_single(), digits = 2 ) )
-    updateNumericInput(session, "axis1", value = round(ymin_single()/lost_num_pol(), digits = 2) )
-    updateNumericInput(session, "axis2", value = round(ymax_single()/lost_num_pol(), digits = 2) )
-  })
+  #observe({
+  #  updateNumericInput(session, "axis3", value = round(xmin_single(), digits = 2 ) )
+  #  updateNumericInput(session, "axis4", value = round(xmax_single(), digits = 2 ) )
+  #  updateNumericInput(session, "axis1", value = round(ymin_single()/lost_num_pol(), digits = 2) )
+  #  updateNumericInput(session, "axis2", value = round(ymax_single()/lost_num_pol(), digits = 2) )
+  #})
   
   # show notification if show fluorescence is selected but there is no fluorescence signal in the currently selected file
   observeEvent(input$show_fl,{
@@ -1210,16 +1224,16 @@ server <- function(input, output, session) {
   })
   
   # let axis limits update for fluorescence axis
-  observe({
-    req(input$select)
-    if( val$file_types[input$select] == "csv_fluo" & input$show_fl){
-      updateNumericInput(session, "axis1_fl", value = round( ymin_single_fl()/lost_num_fl(), digits = 2 ) )
-      updateNumericInput(session, "axis2_fl", value = round( ymax_single_fl()/lost_num_fl(), digits = 2 ) )
-    }else{
-      updateNumericInput(session, "axis1_fl", value = "")
-      updateNumericInput(session, "axis2_fl", value = "")
-    } 
-  })
+  #observe({
+  #  req(input$select)
+  #  if( val$file_types[input$select] == "csv_fluo" & input$show_fl){
+  #    updateNumericInput(session, "axis1_fl", value = round( ymin_single_fl()/lost_num_fl(), digits = 2 ) )
+  #    updateNumericInput(session, "axis2_fl", value = round( ymax_single_fl()/lost_num_fl(), digits = 2 ) )
+  #  }else{
+  #    updateNumericInput(session, "axis1_fl", value = "")
+  #    updateNumericInput(session, "axis2_fl", value = "")
+  #  } 
+  #})
   
   # show notification if "Show fluorescence" was selected for alignment 
   # but there is not fluorescence signal
@@ -1278,7 +1292,7 @@ server <- function(input, output, session) {
       ylab <- paste("Fluo. (x ", lost_num_fl(), ")", sep = "")
     }
     
-    plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "darkgreen", lwd = lwd,
+    plot(val$xvalues[[input$select]], fluorescence(), type = "l", xaxt = "n", col = "black", lwd = lwd,
          xlim =c(xmin_single(),xmax_single()), ylim = c(ymin_single_fl(), ymax_single_fl()),
          las = 1, ylab = ylab, xlab = "", yaxt = "n", cex.lab = cex_lab, mgp = mgp2)
     a <- axTicks(2)
@@ -1307,6 +1321,8 @@ server <- function(input, output, session) {
   }
   
   plot_singlePol <-function(cex_lab, cex_axis, lwd, mgp1, mgp2){
+    req(val$xvalues[[input$select]])
+    req(val$polysome_data[[input$select]])
     if(lost_num_pol() == 1 ){
       ylab <- "UV abs."
     }else{
@@ -1314,7 +1330,7 @@ server <- function(input, output, session) {
     }
     
     plot(val$xvalues[[input$select]], val$polysome_data[[input$select]], type = "l", las = 1, lwd = lwd,
-         ylab = ylab, xlab = "Time (min)", mgp = mgp2,
+         ylab = ylab, xlab = "", mgp = mgp2,
          ylim = c(ymin_single(),ymax_single()), 
          xlim =c(xmin_single(),xmax_single()),
          yaxt = "n", xaxt = "n", cex.lab = cex_lab
@@ -1322,6 +1338,7 @@ server <- function(input, output, session) {
     
     
     axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
+    mtext("Time (min)", side = 1, line = mgp1[1], cex = cex_lab)
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
@@ -1375,6 +1392,7 @@ server <- function(input, output, session) {
   }
   
   output$plot_single <- renderPlot({
+    req(val$xvalues[[input$select]])
     plot_singleInput(cex_lab = 1.6, cex_axis = 1.6, lwd = 2, 
                      mgp1 = c(3.5, 1.2, 0), mgp2 = c(3.5, 0.8, 0), 
                      mar_factor = 1)
@@ -1391,8 +1409,8 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       pdf(file, width = 2, height = 1.2, pointsize = 6 )
-      print( plot_singleInput(cex_lab = 0.8, cex_axis = 1, lwd = 1, 
-                              mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0), 
+      print( plot_singleInput(cex_lab = 1, cex_axis = 0.8, lwd = 0.8, 
+                              mgp1 = c(1.7, 0.5, 0), mgp2 = c(2, 0.8, 0), 
                               mar_factor = 0.6) )
       dev.off()
     })  
@@ -1477,6 +1495,17 @@ server <- function(input, output, session) {
     val$color_vector <- as.list(dummy)
   })
   
+  # When a new file is added to the alignment, the file name is used for the figure legend:
+  observeEvent(val$files_to_align, {
+    newest <- tail(val$files_to_align, 1)
+    basename <- gsub(".csv|.txt|.pks", "", newest)
+    val$legend_names[newest] <- basename
+  })
+  
+  # Change names of profiles for legend:
+  observeEvent(input$rename, {
+    val$legend_names[input$select_alignment] <- input$new_name 
+  })
   
   # for normalization of surfaces:
   norm_factor <- reactive({
@@ -1699,15 +1728,15 @@ server <- function(input, output, session) {
     }})
   
   
-  observe({
-    if(length(val$files_to_plot >= 1))
-    {
-      updateNumericInput(session, "axis3_a", value = round( xmin_aligned() /lost_num_al_Index(), digits = 2 ) )
-      updateNumericInput(session, "axis4_a", value = round( xmax_aligned() /lost_num_al_Index(), digits = 2 ) )
-      updateNumericInput(session, "axis1_a", value = round( ymin_aligned()/lost_num_al_pol(), digits = 2 ) )
-      updateNumericInput(session, "axis2_a", value = round( ymax_aligned()/lost_num_al_pol(), digits = 2 ) )
-    }
-  })
+  #observe({
+  #  if(length(val$files_to_plot >= 1))
+  #  {
+  #    updateNumericInput(session, "axis3_a", value = round( xmin_aligned() /lost_num_al_Index(), digits = 2 ) )
+  #    updateNumericInput(session, "axis4_a", value = round( xmax_aligned() /lost_num_al_Index(), digits = 2 ) )
+  #    updateNumericInput(session, "axis1_a", value = round( ymin_aligned()/lost_num_al_pol(), digits = 2 ) )
+  #    updateNumericInput(session, "axis2_a", value = round( ymax_aligned()/lost_num_al_pol(), digits = 2 ) )
+  #  }
+  #})
   
   # let axis limits update for fluorescence axis
   observe({
@@ -1719,7 +1748,6 @@ server <- function(input, output, session) {
       updateNumericInput(session, "axis2_a_fl", value = round( ymax_aligned_fl() /lost_num_al_fl(), digits = 2 ) )
     }
   })
-  
   
   
   #### plotting function for aligned profiles
@@ -1737,9 +1765,9 @@ server <- function(input, output, session) {
     x <- seq(aligned_starts()[f], aligned_ends()[f], by = 1/norm_factor_x()[f])
     plot(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]],
          lwd = val$linewidth_collected[[f]]*lwd_factor, 
-         ylab = ylab, xlab = "Relative position", las = 1,
+         ylab = ylab, xlab = "", las = 1,
          col = val$color_vector[[f]], mgp = mgp2, 
-         ylim = c(val$ymin,val$ymax), xlim = c(val$xmin,val$xmax),
+         ylim = c(ymin_aligned(),ymax_aligned()), xlim = c(xmin_aligned(),xmax_aligned()),
          yaxt = "n", xaxt = "n", cex.lab = cex_lab
     )
     
@@ -1761,6 +1789,7 @@ server <- function(input, output, session) {
     
     a <- axTicks(1)
     axis(1, at = a, labels = a/lost_num_al_Index(), las = 1, mgp = mgp1, cex.axis = cex_axis)
+    mtext("Relative position", side = 1, line = mgp1[1], cex = cex_lab)
     
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_al_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
@@ -1782,10 +1811,6 @@ server <- function(input, output, session) {
       points(x, values_list()[[f]], type = "l", lty = val$linetype_collected[[f]], 
              lwd = val$linewidth_collected[[f]]*lwd_factor, col = val$color_vector[[f]])
     }
-    legend("topright", legend = val$files_to_plot, lty = unlist(val$linetype_collected[val$files_to_plot]), 
-           lwd = unlist(val$linewidth_collected[val$files_to_plot])*lwd_factor, col = unlist(val$color_vector[val$files_to_plot]),
-           bty = "n", cex = cex_legend
-    )
     
     #create reactive dataframe of all plots to have access outside of renderPlot function
     val$csv_file_df <- csv_file_df
@@ -1844,12 +1869,22 @@ server <- function(input, output, session) {
     val$csv_file_df_all <- merge(val$csv_file_df, csv_file_df_fluo, by="Index", all = T)
   }
   
+  legend_alignment <- function(cex_legend, lwd_factor){
+    par(mar = c(0, 0, 0, 0) )
+    plot(0, 0, yaxt = "n", xaxt = "n", xlab = "", ylab = "", type = "n", bty = "n")
+    legend_names <- val$legend_names[val$files_to_plot]
+    legend_adjustment <- sqrt( min( c(1, 8/max( nchar(legend_names) ) ) ) )
+    legend("topright", legend = val$legend_names[val$files_to_plot], lty = unlist(val$linetype_collected[val$files_to_plot]), 
+           lwd = unlist(val$linewidth_collected[val$files_to_plot])*lwd_factor, col = unlist(val$color_vector[val$files_to_plot]),
+           bty = "n", cex = cex_legend*legend_adjustment)
+  }
+  
   plot_alignment <- function(cex_lab, cex_axis, lwd, 
                              mgp1, mgp2, 
                              cex_legend, lwd_factor,
                              mar_factor){
     if(input$show_fl_al){
-      layout(matrix(1:2, 2, 1), height = c(0.5, 1) ) # divides the plotting area into 2 rows
+      layout(matrix(1:4, 2, 2), height = c(0.6, 0.9), width = c(0.8, 0.2) ) # divides the plotting area into 2 rows
       par(mar = c(0, 5, 0.5, 2)*mar_factor)
       plot_alignedFluo(cex_lab, cex_axis, lwd, 
                        mgp2, lwd_factor)
@@ -1857,11 +1892,14 @@ server <- function(input, output, session) {
       plot_alignedPol(cex_lab, cex_axis, lwd, 
                       mgp1, mgp2, 
                       cex_legend, lwd_factor)
+      legend_alignment(cex_legend, lwd_factor)
     }else{
+      layout(matrix(1:2, 1, 2), height =  c(0.6, 0.9), width = c(0.8, 0.2) ) # divides the plotting area into 2 columns
       par(mar = c(5, 5, 0.5, 2)*mar_factor)
       plot_alignedPol(cex_lab, cex_axis, lwd, 
                       mgp1, mgp2, 
                       cex_legend, lwd_factor)
+      legend_alignment(cex_legend, lwd_factor)
     }
   }
   
@@ -1871,20 +1909,19 @@ server <- function(input, output, session) {
     {
       plot_alignment(cex_lab = 1.6, cex_axis = 1.6, lwd = 2, 
                      mgp1 = c(3.5, 1.2, 0), mgp2 = c(3.5, 0.8, 0), 
-                     cex_legend = 1, lwd_factor = 1,
+                     cex_legend = 1.5, lwd_factor = 1,
                      mar_factor = 1)
     }
   })
   
   # Enable download of current plot as pdf
-  
   output$downloadPlot <- downloadHandler(
     filename = "alignment.pdf",
     content = function(file) {
       pdf(file,width = 2, height = 1.2, pointsize = 6 )
-      print( plot_alignment(cex_lab = 0.8, cex_axis = 1, lwd = 1, 
-                            mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0),  
-                            cex_legend = 0.8, lwd_factor = 0.5,
+      print( plot_alignment(cex_lab = 1, cex_axis = 0.8, lwd = 0.8, 
+                            mgp1 = c(1.7, 0.5, 0), mgp2 = c(2, 0.8, 0),  
+                            cex_legend = 0.5, lwd_factor = 0.8,
                             mar_factor = 0.6) )
       dev.off()
     })  
@@ -1954,7 +1991,7 @@ server <- function(input, output, session) {
   
   
   plot_2nd_deriv <-function(cex_lab, cex_axis, lwd, mgp2){
-    plot(val$xvalues[[input$select2]][-c(1:2)], second_deriv_smoothed(), type = "l", lwd = 2, xaxt = "n", col = "black", 
+    plot(val$xvalues[[input$select2]][-c(1:2)], second_deriv_smoothed(), type = "l", lwd = lwd, xaxt = "n", col = "black", 
          las = 1, ylab = "2nd derivative", mgp = c(3.5, 0.8, 0), xlab = "", yaxt = "n", cex.lab = 1.6,
          xlim = c(xmin_d(), xmax_d()) )
     a <- axTicks(2)
@@ -2113,6 +2150,7 @@ server <- function(input, output, session) {
       # determine peak position that is closest to the click:
       closest <- order( abs(pos_to_choose() - input$click_deconv$x) )[1]
       closest_peak <- pos_to_choose()[closest]
+      
       # When closest peak has not been generated before:
       if( !(closest_peak %in% val$peak_pos[[input$select2]]) )
       {
@@ -2224,7 +2262,7 @@ server <- function(input, output, session) {
     }
     
     plot(val$xvalues[[input$select2]], yvalue_deconv(), type = "l", lwd = lwd, las = 1,
-         ylab = ylab, xlab = "Time (min)",
+         ylab = ylab, xlab = "",
          ylim = c(ymin_d(),ymax_d()), 
          xlim =c(xmin_d(),xmax_d()), mgp = mgp2,
          yaxt = "n", xaxt = "n", cex.lab = cex_lab
@@ -2232,7 +2270,7 @@ server <- function(input, output, session) {
     
     
     axis(1, las = 1, mgp = mgp1, cex.axis = cex_axis)
-    
+    mtext("Time (min)", side = 1, line = mgp1[1], cex = cex_lab)
     a <- axTicks(2)
     axis(2, at = a, labels = a/lost_num_pol(), las = 1, mgp = mgp2, cex.axis = cex_axis)
   }
@@ -2344,58 +2382,87 @@ server <- function(input, output, session) {
     },
     content = function(file) {
       pdf(file, width = 2, height = 1.2, pointsize = 6 )
-      print( plot_singleInput_deconv(cex_lab = 1, cex_axis = 1, lwd = 1, 
-                                     mgp1 = c(2, 0.8, 0), mgp2 = c(2, 0.8, 0), 
+      print( plot_singleInput_deconv(cex_lab = 1, cex_axis = 0.8, lwd = 0.8, 
+                                     mgp1 = c(1.7, 0.5, 0), mgp2 = c(2, 0.8, 0), 
                                      mar_factor = 0.6) )
       dev.off()
     })  
   
-  # Transfer quantification to statistics panel:
-  observeEvent(input$to_stats,{
-    files <- unique( val$df_quant[1] )
-    val$conditions_tab <- cbind( files, 
-                                 rep("", length(files) ) ,
-                                 rep("", length(files) )
-    )
-    colnames(val$conditions_tab) <- c("File", "Variable1", "Variable2")
+  ## The statistics panel:
+  
+  # Generating a table for entering the independent variables for beta regression on the 
+  # quantified peaks or areas:
+  observeEvent(val$df_quant, {
+    files <- val$df_quant[,1]
+    # When the first quantification is performed, the table is generated with two variables:
+    if(length(files) == 1)
+    {
+      val$conditions_tab <- cbind("", "")
+      colnames(val$conditions_tab) <- c("Variable1", "Variable2")
+      rownames(val$conditions_tab) <- files
+    }
     
+    # When quantifications are performed on further files, lines are added to the existing table:
+    if( !all(files %in% rownames(val$conditions_tab) ) )
+    {
+    new_line <- rep("", dim(val$conditions_tab)[2])
+    val$conditions_tab <- rbind(val$conditions_tab, new_line)
+    rownames(val$conditions_tab) <- files
+    }
+  })
+  
+  # When more than two independent variables are required, 
+  # additional columns can be added to the table:
+  observeEvent(input$add_variable, {
+    new_col <- rep("", dim(val$conditions_tab)[1] )
+    val$conditions_tab <- cbind(val$conditions_tab, new_col)
+    colnames(val$conditions_tab)[dim(val$conditions_tab)[2]] <- paste("Variable", dim(val$conditions_tab)[2], sep = "")
+  })
+  
+  # When independent variables are entered, the table 
+  # and also the data frame for beta regression are updated:
+  observeEvent(input$files_conditions_cell_edit, {
+    row  <- input$files_conditions_cell_edit$row
+    col <- input$files_conditions_cell_edit$col
+    
+    # update table with independent variables:
+    val$conditions_tab[row, col] <- input$files_conditions_cell_edit$value
+    
+    # update data frame for beta regression:
+    #Proportions <- val$df_quant[, input$select_region]/val$df_quant[,"Total"]
+    #File <- val$df_quant[,1]
+    #Conditions <- val$conditions_tab[,-1]
+    #val$stats_tab <- cbind(File, Proportions, Conditions)
+    val$stats_tab[row, col + 2] <-  input$files_conditions_cell_edit$value
+  })
+  
+  
+  # When an area or peak is quantified, 
+  # the regions available for analysis are updated:
+ observeEvent(colnames(val$df_quant),{
     available_regions <- setdiff( colnames(val$df_quant), c("File", "Total") )
     updateSelectInput(session, "select_region",
                       choices = available_regions)
   })
   
-  observeEvent(input$add_variable, {
-    new_col <- rep("", dim(val$conditions_tab)[1] )
-    val$conditions_tab <- cbind(val$conditions_tab, new_col)
-    colnames(val$conditions_tab)[dim(val$conditions_tab)[2]] <- paste("Variable", dim(val$conditions_tab)[2] - 1, sep = "")
-  })
-  
-  observeEvent(input$select_region, {
+  # Quantifications are normalized to the total area,
+  # and updated when the values or the selected region changes: 
+  observe({
+    req(input$select_region)
     Proportions <- val$df_quant[, input$select_region]/val$df_quant[,"Total"]
     File <- val$df_quant[,1]
-    Conditions <- val$conditions_tab[,-1]
+    Conditions <- val$conditions_tab
     val$stats_tab <- cbind(File, Proportions, Conditions)
   })
   
-  
-  #### Replace data 
-  observeEvent(input$files_conditions_cell_edit, {
-    val$conditions_tab <<- editData(val$conditions_tab, 
-                                    input$files_conditions_cell_edit,
-                                    "files_conditions")
-    
-    Proportions <- val$df_quant[, input$select_region]/val$df_quant[,"Total"]
-    File <- val$df_quant[,1]
-    Conditions <- val$conditions_tab[,-1]
-    val$stats_tab <- cbind(File, Proportions, Conditions)
-  })
-  
-  output$files_conditions <- renderDT(
+ # Display table for entering independent variables:  
+ output$files_conditions <- renderDT(
     val$conditions_tab, editable = "cell",
-    options = list(searching=FALSE)
+    options = list(searching=FALSE),
+    rownames = TRUE
   )
   
-  # create output table showing data for statistics
+  # Display table showing data for statistics:
   output$stats_tab <- renderTable(
     val$stats_tab
   )
@@ -2410,6 +2477,7 @@ server <- function(input, output, session) {
       for(i in names(val) )
       {
         forExport[[ i ]] <- val[[i]]
+        forExport$active_peak = list()
       }
       save(forExport, file = file)
     }
