@@ -1,0 +1,119 @@
+---
+title: "Manual QuAPPro"
+subtitle: "An R/shiny web application for Quantification and Alignment of Polysome Profiles"
+author: "Chiara Schiller and Johanna Schott"
+date: "31.01.2022"
+output: html_document
+runtime: shiny
+---
+
+
+# Table of contents
+1. [Introduction](#introduction)
+2. [Analysis of polysome profiles (Tab 1)](#Tab1)  
+    + 2.1. [Loading polysome profiles](#subparagraph1)  
+    + 2.2. [Fluorescence signal single profile](#subparagraph2)  
+    + 2.3. [Setting x-anchor and baseline](#subparagraph3)  
+    + 2.4. [Quantification](#subparagraph4)  
+       + 2.4.1. [How are quantification values calculated?](#subparagraph4.1)  
+       + 2.4.2. [Workflow: Quantification of single profiles](#subparagraph4.2)  
+    + 2.5. [Alignment](#subparagraph5)  
+       + 2.5.1. [How are the profiles aligned by the application?](#subparagraph5.1)  
+       + 2.5.2. [Workflow: Alignment of several profiles](#subparagraph5.2)  
+    + 2.6. [Helper functions](#subparagraph6)  
+    + 2.7. [Normalization](#subparagraph7)  
+       + 2.7.1. [How are the profiles normalized by the application?](#subparagraph7.1)  
+       + 2.7.2. [Workflow: Normalization of polysome profiles](#subparagraph7.2)
+    + 2.8. [Download plots](#subparagraph8) 
+3. [Quantification summary](#Tab2)  
+4. [Alignment table](#Tab3)
+5. [Frequently asked questions](#Questions)
+
+## 1. Introduction <a name="introduction"></a>
+In order to facilitate and improve the analysis and comparison of polysome profiles, we created a tool that allows interactive alignment of polysome profiles and quantification of subsections of individual profiles using the Shiny Web App format. QuAPPro also allows visualization and passive quantification of associated fluorescence signals. Generally, profile analysis is performed by selecting a desired feature button and thereupon interacting with the visualized profile to individually select anchors or areas. For higher reproducibility, the user can apply several helper functions while interacting with the plotting area to precisely find i.e., local minima or maxima of the profiles. Besides alignment and quantification, the tool also enables normalization of selected profiles. Generated plots, quantification values or aligned and normalized profile values can be easily downloaded for further usage.
+The application is subdivided into three main tabs for your analysis:
+
+
+I.	**Analysis profiles** – Profiles with or without fluorescence signal can be uploaded as .pks or .csv file and are instantly visualized in the plotting area. The profiles selected by the user can be aligned, quantified, and normalized. The generated plots during analysis can be downloaded at any time.
+
+
+II.	**Quantification summary** – The values of areas quantified and named by the user are displayed as constantly updating table. This table can be downloaded as .csv file.
+
+
+III.	**Alignment table** – The adjusted profile values are displayed as constantly updating table. This table can be downloaded as .csv file.
+
+## 2.	Analysis of polysome profiles (Tab 1) <a name="Tab1"></a>
+### 2.1.	Loading polysome profiles <a name="subparagraph1"></a>
+The user can upload one ore more profiles at a time by clicking the “Browse” button and selecting a .pks or .csv file either produced by the Peaktrak software of a Teledyne Isco fractionator or by a gradient station from BioComp. The app can also read associated fluorescence signals in the file detected by the Triax detector of the BioComp gradient station. When a profile is loaded, it is available in the “Select files” dropdown menu throughout the whole session. The selected profile is plotted in the plotting area with the filename as title. The user can change the axis settings of the plotting area at any time while the changed values are stored for each profile individually. 
+
+### 2.2. Fluorescence signal single profile <a name="subparagraph2"></a>
+If the currently selected file contains a fluorescence signal ("SampleFluor" column), the user can tick the option “Show fluorescence signal” next to the single profile. The minimum and maximum y-axis values can be changed. The y-axis values are multiplied by the factor indicated in the label of the fluorescence y-axis.
+
+### 2.3. Setting x-anchor and baseline <a name="subparagraph3"></a>
+The x-anchor indicates the position at which the profiles should be aligned along the x-axis (elution time) while the baseline indicates the value to be subtracted from the measured UV absorbance for alignment along the y-axis and for area quantification. After clicking the buttons “x-anchor” or “baseline”, the user can hover over the plotting area (cursor visible as black cross) and set a line with a mouse click at the desired position. The baseine can be set for the fluorescence and the polysome profiles. The application finds the closest point of the profile to the selected point. For applying helper functions while setting vertical lines (see section 2.5). Once a feature button is clicked, the user can change the line positions consecutively. If the set lines should not be visible in the plot, the user can remove the tick “Show baseline and x-anchor”.
+
+
+### 2.4. Quantification <a name="subparagraph4"></a>
+
+#### 2.4.1. How are the quantification values calculated? <a name="subparagraph4.1"></a>
+The area to be quantified can be defined by the user from a start and an end x-value (elution time). The surface is calculated by adding up all y-values (UV absorbance or fluorescence signal) from area start to end, each value subtracted by the baseline. The area values include area start and end values. 
+
+#### 2.4.2. Workflow: Quantification of single profiles <a name="subparagraph4.2"></a>
+For quantification of polysome profiles, the user can employ the buttons in the “Quantification” area. The user can set area start and end as vertical lines by clicking the respective buttons “set area start” or “set area end” and clicking into the plot, as described in section 1.2.2. The area name can be set by selecting one of the options in the “Select area to quantify” dropdown menu. The user can enter a different name than proposed by typing a name below “Optional: Name new area” and further click “Add area name to list”. Thereupon, the added name is selectable in the dropdown menu as well. Having set the baseline, area start and end as well as the area name, the user can click “Quantify selected area”. Once an area is quantified, it will be colored in the plot. Whenever the user revisits a quantified area name of a given profile, it will be displayed in the plot. Again, the user can remove the tick for showing area and lines. If the profile has a fluorescence signal and the respective baseline was set, the fluorescence signal will be quantified passively together with the polysome profile. The fluorescence signal is only passively quantified if the fluorescence area is visible in the respective plotting area.
+
+### 2.5. Alignment <a name="subparagraph5"></a>
+
+#### 2.5.1. How are the profiles aligned by the application? <a name="subparagraph5.1"></a>
+The x-anchor for alignment can be set by the user (see section 1.2.2). The application finds the x-anchor with the highest value (max-anchor) and shifts all other profiles towards the max-anchor, so that every anchor is positioned on the same x-value and all x-values are positive. The absolute lengths and heights of the profiles do not change during this process. The original unit “time (min)” is replaced by an “Index”.
+
+#### 2.5.2. Workflow: Alignment of several profiles <a name="subparagraph5.2"></a>
+Once both, a baseline and an x-anchor (see section 1.2.2), are set for a profile, the profile gets automatically displayed in the alignment plotting area on the right side of the page. Focusing on the alignment area, the user can see a dropdown menu with “Profiles available for alignment”. The profiles get color-coded and automatically aligned along the x-anchor. In the right upper corner, a legend with the filenames is visible while the order can be changed by clicking the up and down buttons next to the dropdown menu. Profiles selected in the dropdown menu can be adjusted by the user for color and line type. Complete color palettes can be selected as well, initially, the "Dark palette" is used. To remove a selected file from the current alignment, the user can choose “Hide file”. The hidden file is still selectable and can be restored by clicking “Show profile”, as all previous settings for this profile are stored during the session. The user can also switch the option “Display x-anchor in alignment” to see or hide the x-anchor in the plotting area. Analogous to the single profiles, the fluorescence signal is passievely aligned and can be shown by ticking the respective option. This option only applies for files with fluorescence signal and set baseline for the signal.
+
+### 2.6. Helper functions <a name="subparagraph6"></a>
+For setting vertical lines (x-anchor (section 1.2.2), start and end of an area for quantification (section 1.2.3.2)), the user can select helper functions to find specific values within the plot (left single plot area). The default setting is “help find min/max” to find local minima and maxima of the profile. Local maxima are defined by at least five consecutive points that show an increase compared to the preceding point, followed by at least five consecutive points that show a decrease compared to the preceding point. If there is a plateau of equal values between these two segments, the middle of the plateau is selected. Local minima are defined in an analogous way. The user can also select “help find inflections”, which is especially helpful for two melted peaks or halfmer quantification. For the identification of inflection points, the profile is first smoothed by a sliding window that replaces each value with the mean of the value itself, the five preceding and the five following points. This is necessary to remove minor variations of the UV absorbance measurements. On the smoothed profile, inflection points are defined by at least five consecutive increasing or decreasing changes between points followed by at least five decreasing or increasing changes. Having one of these options ticked, the helper function leads the vertical line to the position closest to the selected point. “No usage of helper functions” can be selected to not use any helper functions. One of the three options must be selected.
+
+### 2.7. Normalization <a name="subparagraph7"></a>
+#### 2.7.1. How are the profiles normalized by the application? <a name="subparagraph7.1"></a>
+For normalization of aligned profiles, the “Total” areas of the aligned profiles need to be quantified (see section 1.2.3.2).
+
+
+**Height normalization**: The profile height is normalized to the total area of the profile with the first quantified total area. To calculate a y-normalization factor, the quantified total area of an aligned profile is divided by the total area of the first profile. The y-values (absorbance) of the profile are then divided by the respective y-normalization factor which is also automatically performed for the respective baseline.
+
+
+**Length normalization**: The application determines the length of a profile by subtracting the start value from the end value of the total area. The length of a profile is divided by the length of the first profile with quantified total area to calculate a normalization factor. All y-values (absorbance) and baselines are multiplied, and all x-values (elution time, later index) are divided by the x-normalization factor. Thereby, the area under the profiles is maintained.
+
+#### 2.7.2. Workflow: Normalization of polysome profiles <a name="subparagraph7.2"></a>
+To normalize aligned profiles to their height and length, the user can tick “Normalize height in alignment” or “Normalize length in alignment”. By ticking the respective options, the alignment plot will automatically update. Normalization in the alignment plot does not change anything for individually displayed profiles.
+
+
+### 2.8. Download plots <a name="subparagraph8"></a>
+Pressing “Download plot” below the plotting areas will open the user’s browser to save the respective plot as pdf. The button can be pressed at any time and infinitely often.
+
+## 3. Quantification summary (Tab II) <a name="Tab2"></a>
+The user can view an updating table of all quantified areas during the session (see section 2.3). Not available area quantification values for a given file display “NA”. Aligned fluorescence signals have the file name with a "_fluo" extension. Clicking the button “Download .csv file” opens the user’s explorer to save the table as .csv file. The user should add the extension “.csv” to the given file name.
+
+## 4. Alignment table (Tab III) <a name="Tab3"></a>
+The user can view an updating table of all quantified areas during the session (see section 2.3). Not available area quantification values for a given file display “NA”. Quantified fluorescence signal area have the area name with a "_fluo" extension. Clicking the button “Download .csv file” opens the user’s explorer to save the table as .csv file. The user should add the extension “.csv” to the given file name.
+
+## 5. Frequently asked questions <a name="Questions"></a>
+•	Why are there no lines displayed in the plot, although I clicked into the plot after selecting a feature?  
+One might overlook the ticking options for displaying lines or areas. The moment a line value is selected by the user, it will be displayed in the plotting area if the option is ticked accordingly. Also the baseline buttons for fluorescence and polysome prfoiles might be mixed up and one is clicking in the wrong plotting area.
+
+
+•	Why do the aligned profiles not look properly aligned along the x-anchor?  
+The user might have set one of the x-anchors at a different position. Checking the different positions is easily done by clicking through the dropdown menu of individually loaded files and looking at the x-anchor line in the plot. 
+
+
+•	How can I color all aligned profiles uniformly?  
+The user can copy the displayed hexameric color code of one profile into the same field for each other profile.
+
+
+
+
+
+
+
+
+
+
+
