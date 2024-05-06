@@ -2,7 +2,8 @@
 
 ### An R/Shiny web application for Quantification and Alignment of Polysome Profiles
 
-The **QuAPPro** Shiny web application allows interacive visualization, alignment and quantification polysome profiles as described by [Schiller et al., BioRxiv 2024](https://www.biorxiv.org/content/10.1101/2024.05.02.592260v1)
+The **QuAPPro** Shiny web application allows interacive visualization, alignment and quantification polysome profiles as described by [Schiller et al. (BioRxiv 2024)](https://www.biorxiv.org/content/10.1101/2024.05.02.592260v1) 
+Polysome profiling is a key technique in the field of mRNA translation research. Ribosomal subunits are separated from monosomes and polysomes by ultracentrifugation on sucrose density gradients. During elution of the gradients, a UV absorbance profile is recorded, which can be used to measure changes in global translation efficiency or ribosome biogenesis. In addition to UV absorbance, it is also possible to record fluorescence to assess the association of fluorescently tagged proteins with ribosomes or polysomes. With QuAPPro, we present an interactive web app for Quantification and Alignment of Polysome Profiles. The tool allows import of many different text file formats, so that it can be used independently of the device or software that generated the profiles. 
 
 
 ![alt text](https://github.com/johannaschott/QuAPPro/blob/main/Figure1.png)
