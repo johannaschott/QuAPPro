@@ -20,6 +20,7 @@ runtime: shiny
 9. [Colors and Lines](#colors-and-lines)
 10. [Normalization](#normalization)
 11. [File Export](#file-export)
+12. [Citation](#citation)
 
 ## 1. Introduction <a name="introduction"></a>
 In order to facilitate and improve the analysis and comparison of polysome profiles, we created a tool that allows interactive alignment of polysome profiles and quantification of subsections of individual profiles using the Shiny Web App format. QuAPPro also allows visualization and quantification of associated fluorescence signals.
@@ -55,3 +56,8 @@ Sometimes, the overall amount of material on your gradients might differ, or the
 
 ## 11.	File Export <a name="file-export"></a>
 To resume an ongoing analysis, it is possible to export the entire analysis as .RData file with “Export Analysis” and re-import it via the file browser (see section [File Import](#file-import)).
+
+## 12. Citation <a name="citation"></a>
+When you use QuAPPro for a publication, please cite this [pre-print](https://www.biorxiv.org/content/10.1101/2024.05.02.592260v1):
+
+Schiller C, Reitter S, Lehmann JA, Fenzl K, Schott J. 2024. QuAPPro: An R/shiny app for Quantification and Alignment of Polysome Profiles. bioRxiv doi: 10.1101/2024.05.02.592260
