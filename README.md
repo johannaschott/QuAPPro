@@ -26,3 +26,9 @@ Comments, suggestions and questions are very welcome.
 - [Chiara Schiller](mailto:chiara.schiller@uni-heidelberg.de)
 - [Johanna Schott](mailto:Johanna.Schott@medma.uni-heidelberg.de)
 
+## Citation
+
+When you use QuAPPro for a publication, please cite:
+Schiller C, Reitter S, Lehmann JA, Fenzl K, Schott J. 2024. QuAPPro: An R/shiny app for Quantification and Alignment of
+Polysome Profiles. bioRxiv doi: 10.1101/2024.05.02.592260
+
