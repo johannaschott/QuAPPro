@@ -61,3 +61,6 @@ To resume an ongoing analysis, it is possible to export the entire analysis as .
 When you use QuAPPro for a publication, please cite this [pre-print](https://www.biorxiv.org/content/10.1101/2024.05.02.592260v1):
 
 Schiller C, Reitter S, Lehmann JA, Fenzl K, Schott J. 2024. QuAPPro: An R/shiny app for Quantification and Alignment of Polysome Profiles. bioRxiv doi: 10.1101/2024.05.02.592260
+
+
+
