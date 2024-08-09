@@ -1,0 +1,19 @@
+---
+title: "QuAPPro Release Notes"
+author: "Chiara Schiller and Johanna Schott"
+date: "2024-08-02"
+output: html_document
+---
+
+#### This is QuAPPro version 0.2.0.
+To run it locally, you can download the code from our [GitHub repository](https://github.com/johannaschott/QuAPPro), where you can also find a collection of older versions.
+
+#### Updates
+
+August 2024: QuAPPro version 0.1.0 was replaced by version 0.2.0.
+* The tab "De-convolution" was added.
+* To accommodate long profile names in the legend of the alignment, the plot will re-size accordingly. 
+* The package shinyalert was used to add a welcome message.
+* The behavior of axis limits and axis labels was further optimized.
+              
+
