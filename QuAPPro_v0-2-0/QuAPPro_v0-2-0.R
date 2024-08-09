@@ -646,7 +646,7 @@ ui <- fluidPage(
     tabPanel(tags$strong("QuAPPro Manual"), icon = icon("question-circle"),
              fluidRow(
                column(1),
-               column(10, htmltools::includeMarkdown("QuAPPro_v0-2-0_manual_240809.Rmd")),
+               column(10, htmltools::includeMarkdown("QuAPPro_v0-2-0_manual.Rmd")),
                column(1)
              ) 
     ),
@@ -656,7 +656,7 @@ ui <- fluidPage(
     tabPanel(tags$strong("Release Notes", style = "color:blue"), icon = icon("info", style = "color:blue"), 
              fluidRow(
                column(1),
-               column(10, htmltools::includeMarkdown("QuAPPro_v0-2-0_releaseNotes_240808.Rmd")),
+               column(10, htmltools::includeMarkdown("QuAPPro_v0-2-0_releaseNotes.Rmd")),
                column(1)
              ) 
     ),
