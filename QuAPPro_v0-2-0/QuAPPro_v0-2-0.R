@@ -1432,7 +1432,7 @@ server <- function(input, output, session) {
       sum( polysomes()[x_first:x_last] - val$baseline[input$select], na.rm = T )
     
     if(input$show_fl & isTruthy(val$baseline_fl[input$select]) ){
-      area_fluo_name <- paste(input$select_area, "_area")
+      area_fluo_name <- paste(input$select_area, "_fluo")
       val$sum_areas[[area_fluo_name]][input$select] <- 
         sum( fluorescence()[x_first:x_last] - val$baseline_fl[input$select], na.rm = T )
     }
@@ -1612,10 +1612,10 @@ server <- function(input, output, session) {
   # Otherwise, the profile with the highest total area is used as reference.
   norm_factor <- reactive({
     req(val$files_to_plot)
-    files_with_total <- names( val$sum_areas[["Total"]] )
+    files_with_total <- names( val$sum_areas[["Total_area"]] )
     if( all(val$files_to_plot %in% files_with_total) & input$normalize_height ){
-      ref_area <- max( val$sum_areas[["Total"]][val$files_to_plot] )
-      dummy <- val$sum_areas[["Total"]][val$files_to_plot]/ref_area
+      ref_area <- max( val$sum_areas[["Total_area"]][val$files_to_plot] )
+      dummy <- val$sum_areas[["Total_area"]][val$files_to_plot]/ref_area
     }else{
       dummy <- rep( 1, length(val$files_to_plot) )
     }
@@ -1630,7 +1630,7 @@ server <- function(input, output, session) {
   # Otherwise, the profile with the longest total area is used as reference.
   norm_factor_x <- reactive({
     req(val$files_to_plot)
-    files_with_total <- names( val$sum_areas[["Total"]] )
+    files_with_total <- names( val$sum_areas[["Total_area"]] )
     if( all(val$files_to_plot %in% files_with_total) & input$normalize_length ){
       all_lengths <- round(val$area_ends[["Total"]][val$files_to_plot] - val$area_starts[["Total"]][val$files_to_plot] )
       ref_length <- max(all_lengths)
@@ -3015,7 +3015,7 @@ server <- function(input, output, session) {
   # A notification is shown when normalization to length or height is selected but the total area 
   # was not quantified for ate least one of the profiles that are shown in the alignment.
   observe({
-    files_with_total <- names(val$sum_areas[["Total"]])
+    files_with_total <- names(val$sum_areas[["Total_area"]])
     if(!all( val$files_to_plot %in% files_with_total ) & (input$normalize_length | input$normalize_height) ){
       showNotification("Please select a total area for all profiles in the alignment.",
                        duration = NULL, type = "error")
