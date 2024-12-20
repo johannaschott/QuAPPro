@@ -19,6 +19,12 @@ This Shiny App was developed in R version 4.0.5. To run it locally, you need the
 - colourpicker
 - stringr
 - colorspace
+- shinyalert
+- DT
+- ggplot2
+- ggbeeswarm
+- dplyr
+- cicerone
 
 ## Contact
 
