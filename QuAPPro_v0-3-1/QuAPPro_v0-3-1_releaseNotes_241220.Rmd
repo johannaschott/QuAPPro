@@ -1,0 +1,31 @@
+---
+title: "QuAPPro Release Notes"
+author: "Chiara Schiller and Johanna Schott"
+date: "2024-12-24"
+output: html_document
+---
+
+#### This is QuAPPro version 0.3.1.
+To run it locally, you can download the code from our [GitHub repository](https://github.com/johannaschott/QuAPPro), where you can also find a collection of older versions.
+
+#### Updates
+
+December 2024: QuAPPro version 0.3.1.
+* A guided tour was added to the Alignment/Areas, Deconvolution and Bar Plot tab.
+
+December 2024: QuAPPro version 0.3.0.
+* The "Bar Plot" tab was added to allow visualization of quantifications.
+* Files with thousands separators can be imported now.
+* Values that are not on the profile can be set as baseline.
+
+August 2024: QuAPPro version 0.2.0.
+* The tab "Deconvolution" was added.
+* To accommodate long profile names in the legend of the alignment, the plot will re-size accordingly. 
+* The package shinyalert was used to add a welcome message.
+* The behavior of axis limits and axis labels was further optimized.
+
+
+
+
+              
+
