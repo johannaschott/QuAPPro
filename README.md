@@ -7,7 +7,7 @@ Polysome profiling is a key technique in the field of mRNA translation research.
 
 ## Usage
 QuAPPro be accessed [here](https://www.umm.uni-heidelberg.de/biochemie/shiny/) as a web app or you can use it locally by downloading and running the provided server version of the R code.
-See the manual in the online app or [here](https://github.com/johannaschott/QuAPPro/blob/main/QuAPPro_v0-4-0/QuAPPro_v0-4-0_manual.Rmd) for details. 
+See the manual in the online app for details. 
 
 ## Example datasets
 All profiles presented by [Schiller et al.](https://www.biorxiv.org/content/10.1101/2024.05.02.592260v1) can be found [here](https://github.com/johannaschott/QuAPPro/tree/main/profile_data_BioRxiv).
