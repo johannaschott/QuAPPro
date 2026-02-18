@@ -6,6 +6,7 @@ The **QuAPPro** Shiny is an interactive web app for <ins>Qu</ins>antification an
 Polysome profiling is a key technique in the field of mRNA translation research. Ribosomal subunits are separated from monosomes and polysomes by ultracentrifugation on sucrose density gradients. During elution of the gradients, a UV absorbance profile is recorded, which can be used to study many different aspects of protein biosynthesis. In addition to UV absorbance, it is also possible to record fluorescence and to assess the association of fluorescently tagged proteins with ribosomes or polysomes. QuAPPro allows the import of many different text file formats, so that it can be used independently of the device or software that generated the profiles. 
 
 <img src = "Figure2_Schiller_et_al.png" width="50%" height="50%">
+Overview figure from [Schiller et al.](https://link.springer.com/article/10.1186/s12859-026-06379-2)
 
 ## Usage
 QuAPPro be accessed [here](https://www.umm.uni-heidelberg.de/mi3/biochemie/tools/quappro) as a web app or you can use it locally by downloading and running the provided server version of the R code.
