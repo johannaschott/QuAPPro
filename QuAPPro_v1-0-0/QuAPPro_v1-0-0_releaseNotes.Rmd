@@ -1,0 +1,45 @@
+---
+title: "QuAPPro Release Notes"
+author: "Chiara Schiller and Johanna Schott"
+date: "2025-10-23"
+output: html_document
+---
+
+### This is QuAPPro version 1.0.0.
+To run it locally, you can download the code from our [GitHub repository](https://github.com/johannaschott/QuAPPro), where you can also find a collection of older versions.
+
+### Updates
+February 2026: QuAPPro version 1.0.0
+* Our [article describing QuAPPro](https://link.springer.com/article/10.1186/s12859-026-06379-2) was published in BMC Bioinformatics!
+
+October 2025: QuAPPro version 0.4.0. 
+* The package shinybusy is now used to show a spinning wheel when the server is busy.
+* The manual was rewritten.
+* The layout of the main tab was restructured.
+* The extension "_decon" is removed in the axis title of the bar plot.
+* Bug fixes:
+    * The peak parameter file of the "Deconvolution" tab is now correctly named.
+    * The table downloaded from the "Bar Plot" tab contains the names of the original files as row names as displayed by the app.
+    * Peaks in the example data can now be selected.
+
+December 2024: QuAPPro version 0.3.1.
+* A guided tour was added to the Alignment/Areas, Deconvolution and Bar Plot tab.
+
+December 2024: QuAPPro version 0.3.0.
+* The "Bar Plot" tab was added to allow visualization of quantifications.
+* Files with thousands separators can be imported now.
+* Values that are not on the profile can now be set as a baseline.
+
+August 2024: QuAPPro version 0.2.0.
+* The tab "Deconvolution" was added.
+* To accommodate long profile names in the legend of the alignment, the plot will re-size accordingly. 
+* The package shinyalert was used to add a welcome message.
+* The behavior of axis limits and axis labels was further optimized.
+
+
+
+
+
+
+              
+
